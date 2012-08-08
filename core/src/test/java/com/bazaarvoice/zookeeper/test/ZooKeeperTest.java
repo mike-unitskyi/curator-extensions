@@ -1,7 +1,5 @@
 package com.bazaarvoice.zookeeper.test;
 
-import com.bazaarvoice.soa.HostDiscovery;
-import com.bazaarvoice.soa.ServiceEndPoint;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.bazaarvoice.zookeeper.ZooKeeperConfiguration;
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
@@ -97,7 +95,7 @@ public abstract class ZooKeeperTest {
         KillSession.kill(curator.getZookeeperClient().getZooKeeper(), _zooKeeperServer.getConnectString());
     }
 
-    protected static class Trigger implements Watcher, HostDiscovery.EndPointListener {
+    protected static class Trigger implements Watcher{
         private final CountDownLatch _latch;
 
         public Trigger() {
@@ -106,16 +104,6 @@ public abstract class ZooKeeperTest {
 
         @Override
         public void process(WatchedEvent event) {
-            _latch.countDown();
-        }
-
-        @Override
-        public void onEndPointAdded(ServiceEndPoint endPoint) {
-            _latch.countDown();
-        }
-
-        @Override
-        public void onEndPointRemoved(ServiceEndPoint endPoint) {
             _latch.countDown();
         }
 
