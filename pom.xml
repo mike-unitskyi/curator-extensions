@@ -5,7 +5,7 @@
     <groupId>com.bazaarvoice.zookeeper-common</groupId>
     <artifactId>zookeeper-common</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <scm>
         <url>https://github.com/bazaarvoice/zookeeper-common</url>
@@ -37,6 +37,7 @@
         </pluginManagement>
     </build>
 
+    <dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>com.netflix.curator</groupId>
@@ -136,6 +137,12 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    </dependencyManagement>
+
+    <modules>
+      <module>core</module>
+      <module>dropwizard</module>
+    </modules>
 
     <distributionManagement>
         <repository>
