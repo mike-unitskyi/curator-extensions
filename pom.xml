@@ -142,12 +142,20 @@
             <version>1.9.0</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.27</version>
+        </dependency>
+
     </dependencies>
     </dependencyManagement>
 
     <modules>
       <module>core</module>
       <module>dropwizard</module>
+      <module>autonode-cli</module>
     </modules>
 
     <distributionManagement>
