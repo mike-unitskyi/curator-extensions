@@ -1,6 +1,7 @@
 package com.bazaarvoice.zookeeper.cli;
 
 import junit.framework.TestCase;
+import org.junit.Test;
 
 /**
  * Created with IntelliJ IDEA.
@@ -19,6 +20,11 @@ public class NeverendingThreadTest extends TestCase {
     @Override
     public void tearDown() throws Exception {
         super.tearDown();    //To change body of overridden methods use File | Settings | File Templates.
+    }
+
+    @Test
+    public void test1(){
+
     }
 
 }
