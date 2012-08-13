@@ -174,7 +174,6 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     }
 
     public static void main(String args[]){
-        int exitCode = 0;
 
         ZooKeeperPersistentEphemeralNodeCLI zkNodeCLI = new ZooKeeperPersistentEphemeralNodeCLI();
         zkNodeCLI.parse(args);
@@ -187,11 +186,8 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
             //caught an IOException while creating the nodes.  Since we didn't create the nodes correctly,
             //don't start the NeverendingThread
             zkNodeCLI._jCommander.usage();
-            exitCode = -1; //set exit code so show that there was an error
-        } finally {
             Closeables.closeQuietly(zkNodeCLI);
+            System.exit(-1); //set exit code so show that there was an error
         }
-
-        System.exit(exitCode);
     }
 }
