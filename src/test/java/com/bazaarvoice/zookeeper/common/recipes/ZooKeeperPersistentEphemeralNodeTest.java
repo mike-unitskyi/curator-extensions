@@ -1,6 +1,5 @@
 package com.bazaarvoice.zookeeper.common.recipes;
 
-import com.bazaarvoice.zookeeper.common.recipes.ZooKeeperPersistentEphemeralNode;
 import com.bazaarvoice.zookeeper.common.test.ZooKeeperTest;
 import com.google.common.collect.Lists;
 import com.netflix.curator.framework.CuratorFramework;
@@ -13,7 +12,9 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
