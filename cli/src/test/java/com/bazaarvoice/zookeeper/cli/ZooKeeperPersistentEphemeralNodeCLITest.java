@@ -63,22 +63,17 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
     @After
     public void tearDown() throws Exception {
-        //TODO close the connection?
-//        for (ZooKeeperConnection connection : _connections) {
-//            Closeables.closeQuietly(connection);
-//        }
         Closeables.closeQuietly((_zkCLI));
         Closeables.closeQuietly(_zooKeeperServer);
-
     }
 
     @Test
     public void testZooKeeperPersistentEphemeralNodeCLI_empty(){
 
-        assertFalse(_zkCLI.get_myConfig().is_sequential());
-        assertNull(_zkCLI.get_myConfig().get_zooKeeperEnsemble());
-        assertNull(_zkCLI.get_myConfig().get_nameSpace());
-        assertEquals(0, _zkCLI.get_myConfig().get_nodeList().size());
+        assertFalse(_zkCLI.getMyConfig().isSequential());
+        assertNull(_zkCLI.getMyConfig().getZooKeeperEnsemble());
+        assertNull(_zkCLI.getMyConfig().getNameSpace());
+        assertEquals(0, _zkCLI.getMyConfig().getNodeList().size());
     }
 
     @Test
@@ -88,7 +83,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().is_sequential());
+        assertTrue(_zkCLI.getMyConfig().isSequential());
     }
 
     @Test
@@ -98,7 +93,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().is_sequential());
+        assertTrue(_zkCLI.getMyConfig().isSequential());
     }
 
 
@@ -110,7 +105,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertEquals(_zkEnsembleString, _zkCLI.get_myConfig().get_zooKeeperEnsemble());
+        assertEquals(_zkEnsembleString, _zkCLI.getMyConfig().getZooKeeperEnsemble());
     }
 
     @Test
@@ -121,7 +116,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertEquals(_zkEnsembleString, _zkCLI.get_myConfig().get_zooKeeperEnsemble());
+        assertEquals(_zkEnsembleString, _zkCLI.getMyConfig().getZooKeeperEnsemble());
     }
 
     @Test
@@ -132,7 +127,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertEquals(_zkNamespaceString, _zkCLI.get_myConfig().get_nameSpace());
+        assertEquals(_zkNamespaceString, _zkCLI.getMyConfig().getNameSpace());
     }
 
     @Test
@@ -143,7 +138,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertEquals(_zkNamespaceString, _zkCLI.get_myConfig().get_nameSpace());
+        assertEquals(_zkNamespaceString, _zkCLI.getMyConfig().getNameSpace());
     }
 
     @Test
@@ -154,7 +149,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().get_nodeList().contains(_zkNodePath+"="+_zkNodeData));
+        assertTrue(_zkCLI.getMyConfig().getNodeList().contains(_zkNodePath+"="+_zkNodeData));
     }
 
     @Test
@@ -165,7 +160,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
 
         _zkCLI.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().get_nodeList().contains(_zkNodePath+"="+_zkNodeData));
+        assertTrue(_zkCLI.getMyConfig().getNodeList().contains(_zkNodePath+"="+_zkNodeData));
     }
 
     @Test

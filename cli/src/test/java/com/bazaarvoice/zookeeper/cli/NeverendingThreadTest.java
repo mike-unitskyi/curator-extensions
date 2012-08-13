@@ -4,11 +4,7 @@ import junit.framework.TestCase;
 import org.junit.Test;
 
 /**
- * Created with IntelliJ IDEA.
- * User: david.han
- * Date: 8/10/12
- * Time: 12:29 AM
- * To change this template use File | Settings | File Templates.
+ * Tests for @link NeverendingThread
  */
 public class NeverendingThreadTest extends TestCase {
 

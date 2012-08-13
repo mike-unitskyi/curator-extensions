@@ -7,7 +7,10 @@ import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.Closeables;
 import org.apache.zookeeper.CreateMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -18,6 +21,8 @@ import java.util.List;
  * Command-line interface for creating a @link ZooKeeperPersistentEphemeralNode
  */
 public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperPersistentEphemeralNodeCLI.class);
 
     private CLIConfig _myConfig = new CLIConfig();
     private ZooKeeperConfiguration _zkConfig = null;
@@ -43,31 +48,26 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
        @Parameter(names = {"-n","--node"}, description = "description of node to be published")
         private List<String> _nodeList = new ArrayList<String>();
 
-        boolean is_sequential() {
+        boolean isSequential() {
             return _isSequential;
         }
 
-        String get_zooKeeperEnsemble() {
+        String getZooKeeperEnsemble() {
             return _zooKeeperEnsemble;
         }
 
-        String get_nameSpace() {
+        String getNameSpace() {
             return _nameSpace;
         }
 
-        List<String> get_nodeList() {
+        List<String> getNodeList() {
             return _nodeList;
         }
     }
 
-//    public ZooKeeperPersistentEphemeralNodeCLI() {
-//        _myConfig = new CLIConfig();
-//        _jCommander = new JCommander(_myConfig);
-//
-//    }
 
     @VisibleForTesting
-    CLIConfig get_myConfig() {
+    CLIConfig getMyConfig() {
         return _myConfig;
     }
 
@@ -76,9 +76,10 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
      * @param args String list of arguments (i.e., passed in on command line to main)
      */
     public void parse(String args[]) {
+        LOG.trace("Parsing arguments into CLIConfig object");
         _jCommander.parse(args);
 
-        if (_myConfig.is_sequential()) {
+        if (_myConfig.isSequential()) {
             _createMode = CreateMode.EPHEMERAL_SEQUENTIAL;
         }
         else {
@@ -91,12 +92,13 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
      * opens a ZooKeeperConnection based on configuration and creates nodes according to the list of node descriptions
      */
     public void createNodes() throws IOException{
+        LOG.trace("creating nodes");
         _zkConfig = new ZooKeeperConfiguration();
-        if (null != _myConfig.get_zooKeeperEnsemble()) _zkConfig.withConnectString(_myConfig.get_zooKeeperEnsemble());
-        if (null != _myConfig.get_nameSpace()) _zkConfig.withNamespace(_myConfig.get_nameSpace());
+        if (null != _myConfig.getZooKeeperEnsemble()) _zkConfig.withConnectString(_myConfig.getZooKeeperEnsemble());
+        if (null != _myConfig.getNameSpace()) _zkConfig.withNamespace(_myConfig.getNameSpace());
         _zkConnection = _zkConfig.connect();
 
-        for(String nodedesc : _myConfig.get_nodeList()){
+        for(String nodedesc : _myConfig.getNodeList()){
             try{
                 _zkNodeList.add(_createNode(nodedesc));
             } catch (IOException e){
@@ -116,6 +118,8 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
         String path;
         byte[] data;
 
+        LOG.trace("creating node "+nodedesc);
+
         //split on "=" at most one time to get the path and the data
         String[] strings = nodedesc.split("=", 2);
         path = strings[0];
@@ -125,10 +129,28 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
             data = new byte[]{};
         } else if (strings[1].charAt(0) =='@'){
             //data in file
-            File file = new File(strings[1].substring(1));
-            data = new byte[(int)file.length()];    //TODO check cast for overflow
-            DataInputStream dis = new DataInputStream(new FileInputStream(file));
-            dis.readFully(data);
+            FileInputStream fis = null;
+            DataInputStream dis = null;
+            String filename = strings[1].substring(1);
+
+            try{
+                fis = new FileInputStream(filename);
+                dis = new DataInputStream(fis);
+                data = new byte[dis.available()];
+                dis.readFully(data);
+            } catch (FileNotFoundException e){
+                LOG.error(e.getLocalizedMessage());
+                throw e;
+            } catch (IOException e) {
+                LOG.error(e.getLocalizedMessage());
+                throw e;
+            } finally {
+                if (null != dis){
+                    dis.close();
+                } else if (null != fis){
+                    fis.close();
+                }
+            }
         } else {
             //data is inline
             data = strings[1].getBytes();
@@ -152,6 +174,8 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     }
 
     public static void main(String args[]){
+        int exitCode = 0;
+
         ZooKeeperPersistentEphemeralNodeCLI zkNodeCLI = new ZooKeeperPersistentEphemeralNodeCLI();
         zkNodeCLI.parse(args);
         try{
@@ -162,7 +186,12 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
         } catch(IOException e){
             //caught an IOException while creating the nodes.  Since we didn't create the nodes correctly,
             //don't start the NeverendingThread
+            zkNodeCLI._jCommander.usage();
+            exitCode = -1; //set exit code so show that there was an error
+        } finally {
+            Closeables.closeQuietly(zkNodeCLI);
         }
-        //TODO any way to clean up the zkNodeCLI? Do we need to clean anything up if we assume the JVM has crashed?
+
+        System.exit(exitCode);
     }
 }
