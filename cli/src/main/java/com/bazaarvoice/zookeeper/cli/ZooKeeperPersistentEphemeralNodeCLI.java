@@ -187,7 +187,7 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
             //don't start the NeverendingThread
             zkNodeCLI._jCommander.usage();
             Closeables.closeQuietly(zkNodeCLI);
-            System.exit(-1); //set exit code so show that there was an error
+            System.exit(1); //set exit code so show that there was an error
         }
     }
 }
