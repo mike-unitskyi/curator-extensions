@@ -127,7 +127,7 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
         if (strings.length == 1) {
             //no data
             data = new byte[]{};
-        } else if (strings[1].charAt(0) =='@'){
+        } else if (strings[1].length() > 0 && strings[1].charAt(0) =='@'){
             //data in file
             FileInputStream fis = null;
             DataInputStream dis = null;
