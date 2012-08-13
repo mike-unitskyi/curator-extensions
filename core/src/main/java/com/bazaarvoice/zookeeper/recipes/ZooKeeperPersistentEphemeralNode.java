@@ -1,7 +1,7 @@
 package com.bazaarvoice.zookeeper.recipes;
 
-import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
+import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -15,7 +15,6 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Stat;
 
-import javax.annotation.Nullable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -138,7 +137,7 @@ public class ZooKeeperPersistentEphemeralNode {
             _sync = sync;
         }
 
-        private void createNode(@Nullable final CountDownLatch latch) {
+        private void createNode(final CountDownLatch latch) {
             _executor.submit(new Runnable() {
                 @Override
                 public void run() {
@@ -147,7 +146,7 @@ public class ZooKeeperPersistentEphemeralNode {
             });
         }
 
-        private void waitThenCreateNode(@Nullable final CountDownLatch latch) {
+        private void waitThenCreateNode(final CountDownLatch latch) {
             _executor.schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -165,7 +164,7 @@ public class ZooKeeperPersistentEphemeralNode {
             }, WAIT_DURATION_IN_MILLIS, TimeUnit.MILLISECONDS);
         }
 
-        private void waitThenDeleteNode(@Nullable final CountDownLatch latch) {
+        private void waitThenDeleteNode(final CountDownLatch latch) {
             _executor.schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -183,7 +182,7 @@ public class ZooKeeperPersistentEphemeralNode {
             });
         }
 
-        private void close(@Nullable final CountDownLatch latch) {
+        private void close(final CountDownLatch latch) {
             _executor.submit(new Runnable() {
                 @Override
                 public void run() {
@@ -227,7 +226,7 @@ public class ZooKeeperPersistentEphemeralNode {
             _createMethod = _curator.create().withProtection().withMode(mode);
         }
 
-        private void createNode(@Nullable CountDownLatch latch) {
+        private void createNode(CountDownLatch latch) {
             if (_deleted) {
                 return;
             }
@@ -305,7 +304,7 @@ public class ZooKeeperPersistentEphemeralNode {
             }
         }
 
-        private void deleteNode(@Nullable CountDownLatch latch) {
+        private void deleteNode(CountDownLatch latch) {
             if (_nodePath == null) {
                 // The only time _nodePath is true is if we're creating a node.  Wait for it to finish.
                 _async.waitThenDeleteNode(latch);
@@ -329,7 +328,7 @@ public class ZooKeeperPersistentEphemeralNode {
             }
         }
 
-        private void close(@Nullable CountDownLatch latch) {
+        private void close(CountDownLatch latch) {
             if (_closing) return;
 
             _closing = true;
