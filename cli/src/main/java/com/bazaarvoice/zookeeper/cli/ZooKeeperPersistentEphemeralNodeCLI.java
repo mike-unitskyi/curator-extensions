@@ -6,13 +6,18 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.io.Closeables;
+import com.google.common.io.Files;
 import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.lang.String;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,6 +41,9 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
 
     @VisibleForTesting
     class CLIConfig{
+        @Parameter(names = "--help", help = true)
+        private boolean _showHelp;
+
         @Parameter(names = {"-s","--sequential"}, description = "enable sequential mode (created nodes are ephemeral and sequential")
         private boolean _isSequential = false;
 
@@ -47,6 +55,10 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
 
        @Parameter(names = {"-n","--node"}, description = "description of node to be published")
         private List<String> _nodeList = new ArrayList<String>();
+
+        boolean showHelp(){
+            return _showHelp;
+        }
 
         boolean isSequential() {
             return _isSequential;
@@ -75,9 +87,19 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
      * parses out the args and sets up the configuration
      * @param args String list of arguments (i.e., passed in on command line to main)
      */
-    public void parse(String args[]) {
+    public void parse(String args[]) throws ParameterException {
         LOG.trace("Parsing arguments into CLIConfig object");
-        _jCommander.parse(args);
+
+        try{
+            _jCommander.parse(args);
+        } catch (ParameterException e){
+            LOG.error("Unable to parse parameters: {}", e);
+            throw e;
+        }
+
+        if (_myConfig.showHelp()){
+            _jCommander.usage();
+        }
 
         if (_myConfig.isSequential()) {
             _createMode = CreateMode.EPHEMERAL_SEQUENTIAL;
@@ -118,7 +140,7 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
         String path;
         byte[] data;
 
-        LOG.trace("creating node "+nodedesc);
+        LOG.trace("creating node {}",nodedesc);
 
         //split on "=" at most one time to get the path and the data
         String[] strings = nodedesc.split("=", 2);
@@ -128,28 +150,13 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
             //no data
             data = new byte[]{};
         } else if (strings[1].length() > 0 && strings[1].charAt(0) =='@'){
-            //data in file
-            FileInputStream fis = null;
-            DataInputStream dis = null;
             String filename = strings[1].substring(1);
-
             try{
-                fis = new FileInputStream(filename);
-                dis = new DataInputStream(fis);
-                data = new byte[dis.available()];
-                dis.readFully(data);
-            } catch (FileNotFoundException e){
-                LOG.error(e.getLocalizedMessage());
-                throw e;
+                File file = new File(filename);
+                data = Files.toByteArray(file);
             } catch (IOException e) {
-                LOG.error(e.getLocalizedMessage());
+                LOG.error("Error creating node with file {}",filename);
                 throw e;
-            } finally {
-                if (null != dis){
-                    dis.close();
-                } else if (null != fis){
-                    fis.close();
-                }
             }
         } else {
             //data is inline
@@ -175,19 +182,27 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
 
     public static void main(String args[]){
 
+        int exitCode = 0;
+
         ZooKeeperPersistentEphemeralNodeCLI zkNodeCLI = new ZooKeeperPersistentEphemeralNodeCLI();
-        zkNodeCLI.parse(args);
         try{
+            zkNodeCLI.parse(args);
             zkNodeCLI.createNodes();
-            NeverendingThread t = new NeverendingThread();
-            t.addObjectReference(zkNodeCLI);
-            t.start();
-        } catch(IOException e){
-            //caught an IOException while creating the nodes.  Since we didn't create the nodes correctly,
-            //don't start the NeverendingThread
+            synchronized (zkNodeCLI){
+                zkNodeCLI.wait();
+            }
+        } catch (ParameterException e){
+            //caught an ParameterException while parsing parameters
             zkNodeCLI._jCommander.usage();
+            exitCode = 1;
+        } catch(IOException e){
+            //caught an IOException while creating the nodes.
+            zkNodeCLI._jCommander.usage();
+            exitCode = 1;
+        } catch(InterruptedException e) {
+        } finally {
             Closeables.closeQuietly(zkNodeCLI);
-            System.exit(1); //set exit code so show that there was an error
         }
+        System.exit(exitCode); //set exit code to show that there was an error
     }
 }
