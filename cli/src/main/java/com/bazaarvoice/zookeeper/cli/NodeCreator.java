@@ -6,10 +6,19 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
+import com.google.common.io.Closeables;
+import com.google.common.io.Files;
 import org.apache.zookeeper.CreateMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.lang.String;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -17,7 +26,9 @@ import java.util.List;
 /**
  * Command-line interface for creating a @link ZooKeeperPersistentEphemeralNode
  */
-public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
+public class NodeCreator implements Closeable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(NodeCreator.class);
 
     private CLIConfig _myConfig = new CLIConfig();
     private ZooKeeperConfiguration _zkConfig = null;
@@ -30,44 +41,26 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     //TODO output usage if exception
 
     @VisibleForTesting
-    class CLIConfig{
-        @Parameter(names = {"-s","--sequential"}, description = "enable sequential mode (created nodes are ephemeral and sequential")
-        private boolean _isSequential = false;
+    static class CLIConfig {
+        @Parameter(names = "--help", help = true)
+        boolean _showHelp;
 
-        @Parameter(names = {"-z","--zookeeper-ensemble"}, description = "the zookeeper ensemble to which the node is published")
-        private  String _zooKeeperEnsemble;
+        @Parameter(names = {"-s","--sequential"}, description = "enable sequential mode (created nodes are ephemeral and sequential")
+        boolean _isSequential = false;
+
+        @Parameter(names = {"-z","--zookeeper-ensemble"}, required = true, description = "the zookeeper ensemble to which the node is published")
+        String _zooKeeperEnsemble;
 
         @Parameter(names = {"-N", "--namespace"}, description = "namespace prepended to each node")
-        private String _nameSpace;
+        String _nameSpace;
 
-       @Parameter(names = {"-n","--node"}, description = "description of node to be published")
-        private List<String> _nodeList = new ArrayList<String>();
-
-        boolean is_sequential() {
-            return _isSequential;
-        }
-
-        String get_zooKeeperEnsemble() {
-            return _zooKeeperEnsemble;
-        }
-
-        String get_nameSpace() {
-            return _nameSpace;
-        }
-
-        List<String> get_nodeList() {
-            return _nodeList;
-        }
+        @Parameter(names = {"-n","--node"}, required = true, description = "description of node to be published")
+        List<String> _nodeList = Lists.newArrayList();
     }
 
-//    public ZooKeeperPersistentEphemeralNodeCLI() {
-//        _myConfig = new CLIConfig();
-//        _jCommander = new JCommander(_myConfig);
-//
-//    }
 
     @VisibleForTesting
-    CLIConfig get_myConfig() {
+    CLIConfig getMyConfig() {
         return _myConfig;
     }
 
@@ -75,10 +68,21 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
      * parses out the args and sets up the configuration
      * @param args String list of arguments (i.e., passed in on command line to main)
      */
-    public void parse(String args[]) {
-        _jCommander.parse(args);
+    public void parse(String args[]) throws ParameterException {
+        LOG.trace("Parsing arguments into CLIConfig object");
 
-        if (_myConfig.is_sequential()) {
+        try{
+            _jCommander.parse(args);
+        } catch (ParameterException e){
+            LOG.error("Unable to parse parameters: {}", e);
+            throw e;
+        }
+
+        if (_myConfig._showHelp){
+            _jCommander.usage();
+        }
+
+        if (_myConfig._isSequential) {
             _createMode = CreateMode.EPHEMERAL_SEQUENTIAL;
         }
         else {
@@ -90,13 +94,14 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     /**
      * opens a ZooKeeperConnection based on configuration and creates nodes according to the list of node descriptions
      */
-    public void createNodes() throws IOException{
+    public void createNodes() throws IOException {
+        LOG.trace("creating nodes");
         _zkConfig = new ZooKeeperConfiguration();
-        if (null != _myConfig.get_zooKeeperEnsemble()) _zkConfig.withConnectString(_myConfig.get_zooKeeperEnsemble());
-        if (null != _myConfig.get_nameSpace()) _zkConfig.withNamespace(_myConfig.get_nameSpace());
+        if (null != _myConfig._zooKeeperEnsemble) _zkConfig.withConnectString(_myConfig._zooKeeperEnsemble);
+        if (null != _myConfig._nameSpace) _zkConfig.withNamespace(_myConfig._nameSpace);
         _zkConnection = _zkConfig.connect();
 
-        for(String nodedesc : _myConfig.get_nodeList()){
+        for(String nodedesc : _myConfig._nodeList){
             try{
                 _zkNodeList.add(_createNode(nodedesc));
             } catch (IOException e){
@@ -116,6 +121,8 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
         String path;
         byte[] data;
 
+        LOG.trace("creating node {}",nodedesc);
+
         //split on "=" at most one time to get the path and the data
         String[] strings = nodedesc.split("=", 2);
         path = strings[0];
@@ -123,12 +130,15 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
         if (strings.length == 1) {
             //no data
             data = new byte[]{};
-        } else if (strings[1].charAt(0) =='@'){
-            //data in file
-            File file = new File(strings[1].substring(1));
-            data = new byte[(int)file.length()];    //TODO check cast for overflow
-            DataInputStream dis = new DataInputStream(new FileInputStream(file));
-            dis.readFully(data);
+        } else if (strings[1].length() > 0 && strings[1].charAt(0) =='@'){
+            String filename = strings[1].substring(1);
+            try{
+                File file = new File(filename);
+                data = Files.toByteArray(file);
+            } catch (IOException e) {
+                LOG.error("Error creating node with file {}",filename);
+                throw e;
+            }
         } else {
             //data is inline
             data = strings[1].getBytes();
@@ -152,17 +162,28 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     }
 
     public static void main(String args[]){
-        ZooKeeperPersistentEphemeralNodeCLI zkNodeCLI = new ZooKeeperPersistentEphemeralNodeCLI();
-        zkNodeCLI.parse(args);
+
+        int exitCode = 0;
+
+        NodeCreator zkNodeCreator = new NodeCreator();
         try{
-            zkNodeCLI.createNodes();
-            NeverendingThread t = new NeverendingThread();
-            t.addObjectReference(zkNodeCLI);
-            t.start();
+            zkNodeCreator.parse(args);
+            zkNodeCreator.createNodes();
+            synchronized (zkNodeCreator){
+                zkNodeCreator.wait();
+            }
+        } catch (ParameterException e){
+            //caught an ParameterException while parsing parameters
+            zkNodeCreator._jCommander.usage();
+            exitCode = 1;
         } catch(IOException e){
-            //caught an IOException while creating the nodes.  Since we didn't create the nodes correctly,
-            //don't start the NeverendingThread
+            //caught an IOException while creating the nodes.
+            zkNodeCreator._jCommander.usage();
+            exitCode = 1;
+        } catch(InterruptedException e) {
+        } finally {
+            Closeables.closeQuietly(zkNodeCreator);
         }
-        //TODO any way to clean up the zkNodeCLI? Do we need to clean anything up if we assume the JVM has crashed?
+        System.exit(exitCode); //set exit code to show that there was an error
     }
 }

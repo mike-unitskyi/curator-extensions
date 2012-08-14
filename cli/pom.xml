@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.zookeeper-common</groupId>
     <artifactId>zookeeper-common-cli</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>cli</name>
@@ -43,7 +43,7 @@
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.bazaarvoice.zookeeper.cli.ZooKeeperPersistentEphemeralNodeCLI</mainClass>
+                                    <mainClass>com.bazaarvoice.zookeeper.cli.NodeCreator</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
@@ -63,6 +63,16 @@
         <dependency>
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
 
         <dependency>

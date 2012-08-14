@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
  * Time: 2:52 PM
  * To change this template use File | Settings | File Templates.
  */
-public class ZooKeeperPersistentEphemeralNodeCLITest {
+public class NodeCreatorTest {
 
     static String _zkSequentialOption = "-s";
     static String _zkSequentialOption_long = "--sequential";
@@ -40,7 +40,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
     static String _zkNodeDataFilenameString_nonexistent = "@"+_zkNodeDataFilename_nonexistent;
 
     TestingServer _zooKeeperServer;
-    ZooKeeperPersistentEphemeralNodeCLI _zkCLI;
+    NodeCreator _zkNodeCreator;
 
 
     @Before
@@ -58,114 +58,123 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
         _zkNodeDataFilename = file.getAbsolutePath();
         _zkNodeDataFilenameString = "@"+_zkNodeDataFilename;
 
-        _zkCLI = new ZooKeeperPersistentEphemeralNodeCLI();
+        _zkNodeCreator = new NodeCreator();
     }
 
     @After
     public void tearDown() throws Exception {
-        //TODO close the connection?
-//        for (ZooKeeperConnection connection : _connections) {
-//            Closeables.closeQuietly(connection);
-//        }
-        Closeables.closeQuietly((_zkCLI));
+        Closeables.closeQuietly((_zkNodeCreator));
         Closeables.closeQuietly(_zooKeeperServer);
-
     }
 
-    @Test
-    public void testZooKeeperPersistentEphemeralNodeCLI_empty(){
-
-        assertFalse(_zkCLI.get_myConfig().is_sequential());
-        assertNull(_zkCLI.get_myConfig().get_zooKeeperEnsemble());
-        assertNull(_zkCLI.get_myConfig().get_nameSpace());
-        assertEquals(0, _zkCLI.get_myConfig().get_nodeList().size());
-    }
+//    @Test
+//    public void testZooKeeperPersistentEphemeralNodeCLI_empty(){
+//
+//        assertFalse(_zkNodeCreator.getMyConfig()._isSequential);
+//        assertNull(_zkNodeCreator.getMyConfig()._zooKeeperEnsemble);
+//        assertNull(_zkNodeCreator.getMyConfig()._nameSpace);
+//        assertEquals(0, _zkNodeCreator.getMyConfig()._nodeList.size());
+//    }
 
     @Test
     public void testCommandParsing_sequential(){
-        String[] args = {_zkSequentialOption
+        String[] args = {
+                _zkEnsembleOption, _zkEnsembleString,
+                _zkNodeOption, _zkNodePath+"="+_zkNodeData,
+                _zkSequentialOption
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().is_sequential());
+        assertTrue(_zkNodeCreator.getMyConfig()._isSequential);
     }
 
     @Test
     public void testCommandParsing_sequential_long(){
-        String[] args = {_zkSequentialOption_long
+        String[] args = {
+                _zkEnsembleOption, _zkEnsembleString,
+                _zkNodeOption, _zkNodePath+"="+_zkNodeData,
+                _zkSequentialOption_long
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().is_sequential());
+        assertTrue(_zkNodeCreator.getMyConfig()._isSequential);
     }
 
 
     @Test
     public void testCommandParsing_ensemble(){
         String[] args = {
-                _zkEnsembleOption, _zkEnsembleString
+                _zkEnsembleOption, _zkEnsembleString,
+                _zkNodeOption, _zkNodePath+"="+_zkNodeData,
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertEquals(_zkEnsembleString, _zkCLI.get_myConfig().get_zooKeeperEnsemble());
+        assertEquals(_zkEnsembleString, _zkNodeCreator.getMyConfig()._zooKeeperEnsemble);
     }
 
     @Test
     public void testCommandParsing_ensemble_long(){
         String[] args = {
-                _zkEnsembleOption_long, _zkEnsembleString
+                _zkEnsembleOption_long, _zkEnsembleString,
+                _zkNodeOption, _zkNodePath+"="+_zkNodeData,
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertEquals(_zkEnsembleString, _zkCLI.get_myConfig().get_zooKeeperEnsemble());
+        assertEquals(_zkEnsembleString, _zkNodeCreator.getMyConfig()._zooKeeperEnsemble);
     }
 
     @Test
     public void testCommandParsing_namespace(){
         String[] args = {
+                _zkEnsembleOption, _zkEnsembleString,
+                _zkNodeOption, _zkNodePath+"="+_zkNodeData,
                 _zkNamespaceOption, _zkNamespaceString
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertEquals(_zkNamespaceString, _zkCLI.get_myConfig().get_nameSpace());
+        assertEquals(_zkNamespaceString, _zkNodeCreator.getMyConfig()._nameSpace);
     }
 
     @Test
     public void testCommandParsing_namespace_long(){
         String[] args = {
+                _zkEnsembleOption, _zkEnsembleString,
+                _zkNodeOption, _zkNodePath+"="+_zkNodeData,
                 _zkNamespaceOption_long, _zkNamespaceString
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertEquals(_zkNamespaceString, _zkCLI.get_myConfig().get_nameSpace());
+        assertEquals(_zkNamespaceString, _zkNodeCreator.getMyConfig()._nameSpace);
     }
 
     @Test
     public void testCommandParsing_nodes(){
         String[] args = {
+                _zkEnsembleOption, _zkEnsembleString,
                 _zkNodeOption, _zkNodePath+"="+_zkNodeData
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().get_nodeList().contains(_zkNodePath+"="+_zkNodeData));
+        assertTrue(_zkNodeCreator.getMyConfig()._nodeList.contains(_zkNodePath+"="+_zkNodeData));
     }
 
     @Test
     public void testCommandParsing_nodes_long(){
         String[] args = {
+                _zkEnsembleOption, _zkEnsembleString,
                 _zkNodeOption_long, _zkNodePath+"="+_zkNodeData
         };
 
-        _zkCLI.parse(args);
+        _zkNodeCreator.parse(args);
 
-        assertTrue(_zkCLI.get_myConfig().get_nodeList().contains(_zkNodePath+"="+_zkNodeData));
+        assertTrue(_zkNodeCreator.getMyConfig()._nodeList.contains(_zkNodePath+"="+_zkNodeData));
     }
 
     @Test
@@ -175,8 +184,8 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
                 _zkNodeOption, _zkNodePath+"="+_zkNodeData
         };
 
-        _zkCLI.parse(args);
-        _zkCLI.createNodes();
+        _zkNodeCreator.parse(args);
+        _zkNodeCreator.createNodes();
 
         //TODO how to inspect the node to see if it was created correctly?
     }
@@ -187,16 +196,16 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
                 _zkNodeOption, _zkNodePath+"="+_zkNodeDataFilenameString
         };
 
-        _zkCLI.parse(args);
-        _zkCLI.createNodes();
+        _zkNodeCreator.parse(args);
+        _zkNodeCreator.createNodes();
 
         //TODO how to inspect the node to see if it was created correctly?
         for (File file : _zooKeeperServer.getTempDirectory().listFiles()) {
             System.out.println(file.getAbsoluteFile());
         }
 
-        _zkCLI.get_zkNodeList();
-        System.out.println(_zkCLI.get_zkNodeList().size());
+        _zkNodeCreator.get_zkNodeList();
+        System.out.println(_zkNodeCreator.get_zkNodeList().size());
     }
 
     @Test(expected = FileNotFoundException.class)
@@ -206,7 +215,7 @@ public class ZooKeeperPersistentEphemeralNodeCLITest {
                 _zkNodeOption, _zkNodePath+"="+_zkNodeDataFilenameString_nonexistent
         };
 
-        _zkCLI.parse(args);
-        _zkCLI.createNodes();
+        _zkNodeCreator.parse(args);
+        _zkNodeCreator.createNodes();
     }
 }
