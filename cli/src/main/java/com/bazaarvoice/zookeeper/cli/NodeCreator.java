@@ -8,6 +8,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import org.apache.zookeeper.CreateMode;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * Command-line interface for creating a @link ZooKeeperPersistentEphemeralNode
  */
-public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
+public class NodeCreator implements Closeable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperPersistentEphemeralNodeCLI.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NodeCreator.class);
 
     private CLIConfig _myConfig = new CLIConfig();
     private ZooKeeperConfiguration _zkConfig = null;
@@ -40,41 +41,21 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     //TODO output usage if exception
 
     @VisibleForTesting
-    class CLIConfig{
+    static class CLIConfig {
         @Parameter(names = "--help", help = true)
-        private boolean _showHelp;
+        boolean _showHelp;
 
         @Parameter(names = {"-s","--sequential"}, description = "enable sequential mode (created nodes are ephemeral and sequential")
-        private boolean _isSequential = false;
+        boolean _isSequential = false;
 
-        @Parameter(names = {"-z","--zookeeper-ensemble"}, description = "the zookeeper ensemble to which the node is published")
-        private  String _zooKeeperEnsemble;
+        @Parameter(names = {"-z","--zookeeper-ensemble"}, required = true, description = "the zookeeper ensemble to which the node is published")
+        String _zooKeeperEnsemble;
 
         @Parameter(names = {"-N", "--namespace"}, description = "namespace prepended to each node")
-        private String _nameSpace;
+        String _nameSpace;
 
-       @Parameter(names = {"-n","--node"}, description = "description of node to be published")
-        private List<String> _nodeList = new ArrayList<String>();
-
-        boolean showHelp(){
-            return _showHelp;
-        }
-
-        boolean isSequential() {
-            return _isSequential;
-        }
-
-        String getZooKeeperEnsemble() {
-            return _zooKeeperEnsemble;
-        }
-
-        String getNameSpace() {
-            return _nameSpace;
-        }
-
-        List<String> getNodeList() {
-            return _nodeList;
-        }
+        @Parameter(names = {"-n","--node"}, required = true, description = "description of node to be published")
+        List<String> _nodeList = Lists.newArrayList();
     }
 
 
@@ -97,11 +78,11 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
             throw e;
         }
 
-        if (_myConfig.showHelp()){
+        if (_myConfig._showHelp){
             _jCommander.usage();
         }
 
-        if (_myConfig.isSequential()) {
+        if (_myConfig._isSequential) {
             _createMode = CreateMode.EPHEMERAL_SEQUENTIAL;
         }
         else {
@@ -113,14 +94,14 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
     /**
      * opens a ZooKeeperConnection based on configuration and creates nodes according to the list of node descriptions
      */
-    public void createNodes() throws IOException{
+    public void createNodes() throws IOException {
         LOG.trace("creating nodes");
         _zkConfig = new ZooKeeperConfiguration();
-        if (null != _myConfig.getZooKeeperEnsemble()) _zkConfig.withConnectString(_myConfig.getZooKeeperEnsemble());
-        if (null != _myConfig.getNameSpace()) _zkConfig.withNamespace(_myConfig.getNameSpace());
+        if (null != _myConfig._zooKeeperEnsemble) _zkConfig.withConnectString(_myConfig._zooKeeperEnsemble);
+        if (null != _myConfig._nameSpace) _zkConfig.withNamespace(_myConfig._nameSpace);
         _zkConnection = _zkConfig.connect();
 
-        for(String nodedesc : _myConfig.getNodeList()){
+        for(String nodedesc : _myConfig._nodeList){
             try{
                 _zkNodeList.add(_createNode(nodedesc));
             } catch (IOException e){
@@ -184,24 +165,24 @@ public class ZooKeeperPersistentEphemeralNodeCLI implements Closeable {
 
         int exitCode = 0;
 
-        ZooKeeperPersistentEphemeralNodeCLI zkNodeCLI = new ZooKeeperPersistentEphemeralNodeCLI();
+        NodeCreator zkNodeCreator = new NodeCreator();
         try{
-            zkNodeCLI.parse(args);
-            zkNodeCLI.createNodes();
-            synchronized (zkNodeCLI){
-                zkNodeCLI.wait();
+            zkNodeCreator.parse(args);
+            zkNodeCreator.createNodes();
+            synchronized (zkNodeCreator){
+                zkNodeCreator.wait();
             }
         } catch (ParameterException e){
             //caught an ParameterException while parsing parameters
-            zkNodeCLI._jCommander.usage();
+            zkNodeCreator._jCommander.usage();
             exitCode = 1;
         } catch(IOException e){
             //caught an IOException while creating the nodes.
-            zkNodeCLI._jCommander.usage();
+            zkNodeCreator._jCommander.usage();
             exitCode = 1;
         } catch(InterruptedException e) {
         } finally {
-            Closeables.closeQuietly(zkNodeCLI);
+            Closeables.closeQuietly(zkNodeCreator);
         }
         System.exit(exitCode); //set exit code to show that there was an error
     }
