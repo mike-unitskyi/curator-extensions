@@ -52,6 +52,7 @@ public class ZooKeeperPersistentEphemeralNode {
     public ZooKeeperPersistentEphemeralNode(ZooKeeperConnection connection, String basePath, byte[] data, CreateMode mode) {
         CuratorFramework curator = ((CuratorConnection) checkNotNull(connection)).getCurator();
         checkNotNull(curator);
+        checkArgument(curator.isStarted());
         checkNotNull(basePath);
         checkNotNull(data);
         checkNotNull(mode);
