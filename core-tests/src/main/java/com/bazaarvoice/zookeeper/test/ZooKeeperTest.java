@@ -84,6 +84,14 @@ public abstract class ZooKeeperTest {
         return curator;
     }
 
+    public ZooKeeperConnection newMockZooKeeperConnectionWithMockCurator() throws Exception {
+        CuratorFramework curator = mock(CuratorFramework.class);
+        when(curator.isStarted()).thenReturn(true);
+        CuratorConnection connection = mock(CuratorConnection.class);
+        when(connection.getCurator()).thenReturn(curator);
+        return connection;
+    }
+
     public ZooKeeperConnection newMockZooKeeperConnection() throws Exception {
         CuratorFramework curator = newCurator();
         CuratorConnection connection = mock(CuratorConnection.class);
@@ -91,19 +99,22 @@ public abstract class ZooKeeperTest {
         return connection;
     }
 
+    public void killSession(ZooKeeperConnection connection) throws Exception {
+        killSession(((CuratorConnection)connection).getCurator());
+    }
+
     public void killSession(CuratorFramework curator) throws Exception {
         KillSession.kill(curator.getZookeeperClient().getZooKeeper(), _zooKeeperServer.getConnectString());
     }
 
-    protected static class Trigger implements Watcher{
+    protected static class Trigger {
         private final CountDownLatch _latch;
 
         public Trigger() {
             _latch = new CountDownLatch(1);
         }
 
-        @Override
-        public void process(WatchedEvent event) {
+        public void fire(){
             _latch.countDown();
         }
 
@@ -114,5 +125,18 @@ public abstract class ZooKeeperTest {
                 throw Throwables.propagate(e);
             }
         }
+    }
+
+    protected static class WatcherTrigger extends Trigger implements Watcher {
+
+        public WatcherTrigger() {
+            super();
+        }
+
+        @Override
+        public void process(WatchedEvent event) {
+            this.fire();
+        }
+
     }
 }

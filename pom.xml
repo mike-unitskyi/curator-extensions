@@ -73,7 +73,6 @@
                 <groupId>com.netflix.curator</groupId>
                 <artifactId>curator-test</artifactId>
                 <version>${curator.version}</version>
-                <scope>test</scope>
             </dependency>
 
             <dependency>
@@ -86,21 +85,20 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.10</version>
-                <scope>test</scope>
             </dependency>
 
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>1.9.0</version>
-                <scope>test</scope>
             </dependency>
 
-         </dependencies>
+        </dependencies>
     </dependencyManagement>
 
     <modules>
         <module>core</module>
+        <module>core-tests</module>
         <module>dropwizard</module>
     </modules>
 

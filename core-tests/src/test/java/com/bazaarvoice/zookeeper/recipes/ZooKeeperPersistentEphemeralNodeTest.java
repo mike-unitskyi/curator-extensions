@@ -1,5 +1,6 @@
 package com.bazaarvoice.zookeeper.recipes;
 
+import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.google.common.collect.Lists;
@@ -42,25 +43,19 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
 
     @Test(expected = NullPointerException.class)
     public void testNullPath() throws Exception {
-        CuratorFramework curator = mock(CuratorFramework.class);
-        CuratorConnection connection = mock(CuratorConnection.class);
-        when(connection.getCurator()).thenReturn(curator);
+        ZooKeeperConnection connection = newMockZooKeeperConnectionWithMockCurator();
         new ZooKeeperPersistentEphemeralNode(connection, null, DATA, CreateMode.EPHEMERAL);
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullData() throws Exception {
-        CuratorFramework curator = mock(CuratorFramework.class);
-        CuratorConnection connection = mock(CuratorConnection.class);
-        when(connection.getCurator()).thenReturn(curator);
+        ZooKeeperConnection connection = newMockZooKeeperConnectionWithMockCurator();
         new ZooKeeperPersistentEphemeralNode(connection, PATH, null, CreateMode.EPHEMERAL);
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullMode() throws Exception {
-        CuratorFramework curator = mock(CuratorFramework.class);
-        CuratorConnection connection = mock(CuratorConnection.class);
-        when(connection.getCurator()).thenReturn(curator);
+        ZooKeeperConnection connection = newMockZooKeeperConnectionWithMockCurator();
         new ZooKeeperPersistentEphemeralNode(connection, PATH, DATA, null);
     }
 
@@ -121,7 +116,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         assertNodeExists(curator, node.getActualPath());
 
         // Register a watch that will fire when the node is deleted...
-        Trigger deletedTrigger = new Trigger();
+        WatcherTrigger deletedTrigger = new WatcherTrigger();
         curator.checkExists().usingWatcher(deletedTrigger).forPath(node.getActualPath());
 
         killSession(node.getCurator());
@@ -137,7 +132,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
         assertNodeExists(curator, node.getActualPath());
 
-        Trigger deletedTrigger = new Trigger();
+        WatcherTrigger deletedTrigger = new WatcherTrigger();
         curator.checkExists().usingWatcher(deletedTrigger).forPath(node.getActualPath());
 
         killSession(node.getCurator());
@@ -146,7 +141,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         assertTrue(deletedTrigger.firedWithin(10, TimeUnit.SECONDS));
 
         // Check for it to be recreated...
-        Trigger createdTrigger = new Trigger();
+        WatcherTrigger createdTrigger = new WatcherTrigger();
         Stat stat = curator.checkExists().usingWatcher(createdTrigger).forPath(node.getActualPath());
         assertTrue(stat != null || createdTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
@@ -164,7 +159,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
 
         // Since we're using an ephemeral node, and the original session hasn't been interrupted the name of the new
         // node that gets created is going to be exactly the same as the original.
-        Trigger createdTrigger = new Trigger();
+        WatcherTrigger createdTrigger = new WatcherTrigger();
         Stat stat = curator.checkExists().usingWatcher(createdTrigger).forPath(originalNode);
         assertTrue(stat != null || createdTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
