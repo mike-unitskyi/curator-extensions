@@ -111,7 +111,7 @@ public abstract class ZooKeeperTest {
             _latch = new CountDownLatch(1);
         }
 
-        public void fire(){
+        public void fire() {
             _latch.countDown();
         }
 
