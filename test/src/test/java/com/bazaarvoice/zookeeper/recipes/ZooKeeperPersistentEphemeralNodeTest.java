@@ -43,19 +43,19 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
 
     @Test(expected = NullPointerException.class)
     public void testNullPath() throws Exception {
-        ZooKeeperConnection connection = newMockZooKeeperConnectionWithMockCurator();
+        ZooKeeperConnection connection = newMockZooKeeperConnection();
         new ZooKeeperPersistentEphemeralNode(connection, null, DATA, CreateMode.EPHEMERAL);
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullData() throws Exception {
-        ZooKeeperConnection connection = newMockZooKeeperConnectionWithMockCurator();
+        ZooKeeperConnection connection = newMockZooKeeperConnection();
         new ZooKeeperPersistentEphemeralNode(connection, PATH, null, CreateMode.EPHEMERAL);
     }
 
     @Test(expected = NullPointerException.class)
     public void testNullMode() throws Exception {
-        ZooKeeperConnection connection = newMockZooKeeperConnectionWithMockCurator();
+        ZooKeeperConnection connection = newMockZooKeeperConnection();
         new ZooKeeperPersistentEphemeralNode(connection, PATH, DATA, null);
     }
 
@@ -180,7 +180,8 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
     }
 
     private ZooKeeperPersistentEphemeralNode createNode(String path, CreateMode mode) throws Exception {
-        ZooKeeperPersistentEphemeralNode node = new ZooKeeperPersistentEphemeralNode(newMockZooKeeperConnection(), path, DATA, mode);
+        ZooKeeperPersistentEphemeralNode node = new ZooKeeperPersistentEphemeralNode(
+                newMockZooKeeperConnection(newCurator()), path, DATA, mode);
         _createdNodes.add(node);
         return node;
     }

@@ -10,11 +10,11 @@
     </parent>
 
     <groupId>com.bazaarvoice.zookeeper-common</groupId>
-    <artifactId>zookeeper-common-core-tests</artifactId>
+    <artifactId>zookeeper-common-test</artifactId>
     <version>0.0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>core-test</name>
+    <name>test</name>
     <description>Tests for Core implementation of zookeeper-common</description>
 
     <dependencies>

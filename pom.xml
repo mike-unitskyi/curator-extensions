@@ -98,7 +98,7 @@
 
     <modules>
         <module>core</module>
-        <module>core-tests</module>
+        <module>test</module>
         <module>dropwizard</module>
     </modules>
 
