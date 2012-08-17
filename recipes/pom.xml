@@ -25,11 +25,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.netflix.curator</groupId>
-            <artifactId>curator-framework</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.bazaarvoice.zookeeper-common</groupId>
             <artifactId>zookeeper-test</artifactId>
             <version>0.0.3-SNAPSHOT</version>
