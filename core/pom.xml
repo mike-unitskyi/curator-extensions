@@ -3,14 +3,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.bazaarvoice.zookeeper-common</groupId>
-        <artifactId>zookeeper-common</artifactId>
+        <groupId>com.bazaarvoice.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
         <version>0.0.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.bazaarvoice.zookeeper-common</groupId>
-    <artifactId>zookeeper-common-core</artifactId>
+    <groupId>com.bazaarvoice.zookeeper</groupId>
+    <artifactId>zookeeper-core</artifactId>
     <version>0.0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -20,12 +20,7 @@
     <dependencies>
         <dependency>
             <groupId>com.netflix.curator</groupId>
-            <artifactId>curator-recipes</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.netflix.curator</groupId>
-            <artifactId>curator-test</artifactId>
-            <scope>test</scope>
+            <artifactId>curator-framework</artifactId>
         </dependency>
 
         <dependency>
@@ -36,12 +31,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

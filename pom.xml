@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.bazaarvoice.zookeeper-common</groupId>
-    <artifactId>zookeeper-common</artifactId>
+    <groupId>com.bazaarvoice.zookeeper</groupId>
+    <artifactId>zookeeper</artifactId>
     <version>0.0.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -13,7 +14,7 @@
         <developerConnection>scm:git:git@github.com:bazaarvoice/zookeeper-common.git</developerConnection>
     </scm>
 
-    <name>zookeeper-common</name>
+    <name>zookeeper</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -42,7 +43,7 @@
         <dependencies>
             <dependency>
                 <groupId>com.netflix.curator</groupId>
-                <artifactId>curator-recipes</artifactId>
+                <artifactId>curator-framework</artifactId>
                 <version>${curator.version}</version>
 
                 <exclusions>
@@ -73,7 +74,6 @@
                 <groupId>com.netflix.curator</groupId>
                 <artifactId>curator-test</artifactId>
                 <version>${curator.version}</version>
-                <scope>test</scope>
             </dependency>
 
             <dependency>
@@ -96,11 +96,13 @@
                 <scope>test</scope>
             </dependency>
 
-         </dependencies>
+        </dependencies>
     </dependencyManagement>
 
     <modules>
         <module>core</module>
+        <module>test</module>
+        <module>recipes</module>
         <module>dropwizard</module>
     </modules>
 
