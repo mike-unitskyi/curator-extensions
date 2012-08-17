@@ -10,7 +10,7 @@
     </parent>
 
     <groupId>com.bazaarvoice.zookeeper-common</groupId>
-    <artifactId>zookeeper-common-core</artifactId>
+    <artifactId>zookeeper-core</artifactId>
     <version>0.0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -20,12 +20,18 @@
     <dependencies>
         <dependency>
             <groupId>com.netflix.curator</groupId>
-            <artifactId>curator-recipes</artifactId>
+            <artifactId>curator-framework</artifactId>
         </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
