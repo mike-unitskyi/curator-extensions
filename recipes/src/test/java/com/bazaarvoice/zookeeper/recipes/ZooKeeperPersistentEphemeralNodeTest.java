@@ -116,13 +116,13 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         assertNodeExists(curator, node.getActualPath());
 
         // Register a watch that will fire when the node is deleted...
-        WatcherTrigger deletedTrigger = new WatcherTrigger();
-        curator.checkExists().usingWatcher(deletedTrigger).forPath(node.getActualPath());
+        WatchTrigger deletedWatchTrigger = new WatchTrigger();
+        curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath());
 
         killSession(node.getCurator());
 
         // Make sure the node got deleted
-        assertTrue(deletedTrigger.firedWithin(10, TimeUnit.SECONDS));
+        assertTrue(deletedWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
 
     @Test
@@ -132,18 +132,18 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
         assertNodeExists(curator, node.getActualPath());
 
-        WatcherTrigger deletedTrigger = new WatcherTrigger();
-        curator.checkExists().usingWatcher(deletedTrigger).forPath(node.getActualPath());
+        WatchTrigger deletedWatchTrigger = new WatchTrigger();
+        curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath());
 
         killSession(node.getCurator());
 
         // Make sure the node got deleted...
-        assertTrue(deletedTrigger.firedWithin(10, TimeUnit.SECONDS));
+        assertTrue(deletedWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
 
         // Check for it to be recreated...
-        WatcherTrigger createdTrigger = new WatcherTrigger();
-        Stat stat = curator.checkExists().usingWatcher(createdTrigger).forPath(node.getActualPath());
-        assertTrue(stat != null || createdTrigger.firedWithin(10, TimeUnit.SECONDS));
+        WatchTrigger createdWatchTrigger = new WatchTrigger();
+        Stat stat = curator.checkExists().usingWatcher(createdWatchTrigger).forPath(node.getActualPath());
+        assertTrue(stat != null || createdWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
 
     @Test
@@ -159,9 +159,9 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
 
         // Since we're using an ephemeral node, and the original session hasn't been interrupted the name of the new
         // node that gets created is going to be exactly the same as the original.
-        WatcherTrigger createdTrigger = new WatcherTrigger();
-        Stat stat = curator.checkExists().usingWatcher(createdTrigger).forPath(originalNode);
-        assertTrue(stat != null || createdTrigger.firedWithin(10, TimeUnit.SECONDS));
+        WatchTrigger createdWatchTrigger = new WatchTrigger();
+        Stat stat = curator.checkExists().usingWatcher(createdWatchTrigger).forPath(originalNode);
+        assertTrue(stat != null || createdWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
 
     @Test

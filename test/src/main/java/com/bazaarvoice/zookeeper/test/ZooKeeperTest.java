@@ -124,7 +124,7 @@ public abstract class ZooKeeperTest {
         }
     }
 
-    public static class WatcherTrigger extends Trigger implements Watcher {
+    public static class WatchTrigger extends Trigger implements Watcher {
         @Override
         public void process(WatchedEvent event) {
             this.fire();

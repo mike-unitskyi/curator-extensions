@@ -3,8 +3,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.bazaarvoice.zookeeper-common</groupId>
-    <artifactId>zookeeper-common</artifactId>
+    <groupId>com.bazaarvoice.zookeeper</groupId>
+    <artifactId>zookeeper</artifactId>
     <version>0.0.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -14,7 +14,7 @@
         <developerConnection>scm:git:git@github.com:bazaarvoice/zookeeper-common.git</developerConnection>
     </scm>
 
-    <name>zookeeper-common</name>
+    <name>zookeeper</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -86,12 +86,14 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.10</version>
+                <scope>test</scope>
             </dependency>
 
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>1.9.0</version>
+                <scope>test</scope>
             </dependency>
 
         </dependencies>

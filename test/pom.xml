@@ -4,22 +4,22 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.bazaarvoice.zookeeper-common</groupId>
-        <artifactId>zookeeper-common</artifactId>
+        <groupId>com.bazaarvoice.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
         <version>0.0.3-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.bazaarvoice.zookeeper-common</groupId>
+    <groupId>com.bazaarvoice.zookeeper</groupId>
     <artifactId>zookeeper-test</artifactId>
     <version>0.0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>test</name>
-    <description>Tests for Core implementation of zookeeper-common</description>
+    <description>Tests for Core implementation of zookeeper</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.bazaarvoice.zookeeper-common</groupId>
+            <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-core</artifactId>
             <version>0.0.3-SNAPSHOT</version>
         </dependency>
@@ -37,11 +37,13 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
