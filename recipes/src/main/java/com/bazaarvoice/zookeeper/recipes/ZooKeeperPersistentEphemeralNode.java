@@ -4,6 +4,7 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.api.PathAndBytesable;
@@ -16,6 +17,7 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Stat;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -87,9 +89,18 @@ public class ZooKeeperPersistentEphemeralNode {
         return _async._sync._curator;
     }
 
+    /**
+     * Gets the actual path, including namespace (if any) and unique ID of the ZooKeeper node backing this object.
+     * </p>
+     * NOTE: This could potentially block forever (if the node never successfully gets created), so this method should
+     * only be called in testing code.
+     * @return The actual path of the ZooKeeper node.
+     * @throws InterruptedException If retrieval of the path is interrupted.
+     * @throws java.util.concurrent.ExecutionException Never.
+     */
     @VisibleForTesting
-    public String getActualPath() {
-        return _async._sync._nodePath;
+    public String getActualPath() throws ExecutionException, InterruptedException {
+        return _async.getActualPath();
     }
 
     private void await(CountDownLatch latch, long duration, TimeUnit unit) {
@@ -190,6 +201,33 @@ public class ZooKeeperPersistentEphemeralNode {
                     _sync.close(latch);
                 }
             });
+        }
+
+        private String getActualPath() throws ExecutionException, InterruptedException {
+            String path = _sync._nodePath;
+            if (path != null) {
+                return path;
+            }
+
+            SettableFuture<String> future = SettableFuture.create();
+
+            while (!future.isDone()) {
+                waitThenGetActualPath(future);
+            }
+
+            return future.get();
+        }
+
+        private void waitThenGetActualPath(final SettableFuture<String> future) {
+            _executor.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    String path = _sync._nodePath;
+                    if (path != null) {
+                        future.set(path);
+                    }
+                }
+            }, WAIT_DURATION_IN_MILLIS, TimeUnit.MILLISECONDS);
         }
     }
 
