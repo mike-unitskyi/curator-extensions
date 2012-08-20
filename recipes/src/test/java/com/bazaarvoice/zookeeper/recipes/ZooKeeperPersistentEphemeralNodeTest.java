@@ -11,9 +11,11 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -198,6 +200,29 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         String path2 = node2.getActualPath();
 
         assertFalse(path1.equals(path2));
+    }
+
+    @Test
+    public void testData() throws Exception {
+        CuratorFramework curator = newCurator();
+
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+
+        assertTrue(Arrays.equals(curator.getData().forPath(node.getActualPath()), DATA));
+    }
+
+    @Test
+    public void testGetPath() throws Exception {
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+
+        assertEquals(PATH, node.getPath());
+    }
+
+    @Test
+    public void testGetData() throws Exception {
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+
+        assertTrue(Arrays.equals(DATA, node.getData()));
     }
 
     @Test
