@@ -80,7 +80,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         CuratorFramework curator = newCurator();
 
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-        assertNodeExists(curator, node.getActualPath());
+        assertNodeExists(curator, node.getActualPath().get());
     }
 
     @Test
@@ -88,9 +88,9 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         CuratorFramework curator = newCurator();
 
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-        assertNodeExists(curator, node.getActualPath());
+        assertNodeExists(curator, node.getActualPath().get());
 
-        String path = node.getActualPath();
+        String path = node.getActualPath().get();
         node.close(10, TimeUnit.SECONDS);  // After closing the path is set to null...
         assertNodeDoesNotExist(curator, path);
     }
@@ -100,7 +100,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         CuratorFramework curator = newCurator();
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
 
-        String path = node.getActualPath();
+        String path = node.getActualPath().get();
         node.close(10, TimeUnit.SECONDS);
         assertNodeDoesNotExist(curator, path);
 
@@ -113,11 +113,11 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         CuratorFramework curator = newCurator();
 
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-        assertNodeExists(curator, node.getActualPath());
+        assertNodeExists(curator, node.getActualPath().get());
 
         // Register a watch that will fire when the node is deleted...
         WatchTrigger deletedWatchTrigger = new WatchTrigger();
-        curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath());
+        curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath().get());
 
         killSession(node.getCurator());
 
@@ -130,10 +130,10 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         CuratorFramework curator = newCurator();
 
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-        assertNodeExists(curator, node.getActualPath());
+        assertNodeExists(curator, node.getActualPath().get());
 
         WatchTrigger deletedWatchTrigger = new WatchTrigger();
-        curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath());
+        curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath().get());
 
         killSession(node.getCurator());
 
@@ -142,7 +142,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
 
         // Check for it to be recreated...
         WatchTrigger createdWatchTrigger = new WatchTrigger();
-        Stat stat = curator.checkExists().usingWatcher(createdWatchTrigger).forPath(node.getActualPath());
+        Stat stat = curator.checkExists().usingWatcher(createdWatchTrigger).forPath(node.getActualPath().get());
         assertTrue(stat != null || createdWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
 
@@ -151,7 +151,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         CuratorFramework curator = newCurator();
 
         ZooKeeperPersistentEphemeralNode node = createNode(PATH, CreateMode.EPHEMERAL);
-        String originalNode = node.getActualPath();
+        String originalNode = node.getActualPath().get();
         assertNodeExists(curator, originalNode);
 
         // Delete the original node...
@@ -167,10 +167,10 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
     @Test
     public void testNodesCreateUniquePaths() throws Exception {
         ZooKeeperPersistentEphemeralNode node1 = createNode(PATH, CreateMode.EPHEMERAL);
-        String path1 = node1.getActualPath();
+        String path1 = node1.getActualPath().get();
 
         ZooKeeperPersistentEphemeralNode node2 = createNode(PATH, CreateMode.EPHEMERAL);
-        String path2 = node2.getActualPath();
+        String path2 = node2.getActualPath().get();
 
         assertFalse(path1.equals(path2));
     }

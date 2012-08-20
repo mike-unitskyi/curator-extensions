@@ -4,6 +4,7 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.api.PathAndBytesable;
@@ -15,9 +16,11 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -88,8 +91,10 @@ public class ZooKeeperPersistentEphemeralNode {
     }
 
     @VisibleForTesting
-    public String getActualPath() {
-        return _async._sync._nodePath;
+    public Future<String> getActualPath() {
+        SettableFuture<String> future = SettableFuture.create();
+        _async.getActualPath(future);
+        return future;
     }
 
     private void await(CountDownLatch latch, long duration, TimeUnit unit) {
@@ -190,6 +195,27 @@ public class ZooKeeperPersistentEphemeralNode {
                     _sync.close(latch);
                 }
             });
+        }
+
+        private void getActualPath(SettableFuture<String> future) {
+            String path = _sync._nodePath;
+            while (path == null) {
+                try {
+                    path = waitThenGetActualPath().get();
+                } catch (Exception e) {
+                    // Ignored.
+                }
+            }
+            future.set(path);
+        }
+
+        private Future<String> waitThenGetActualPath() {
+            return _executor.schedule(new Callable<String>() {
+                @Override
+                public String call() {
+                    return _sync._nodePath;
+                }
+            }, WAIT_DURATION_IN_MILLIS, TimeUnit.MILLISECONDS);
         }
     }
 
