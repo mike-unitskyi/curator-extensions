@@ -16,6 +16,7 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -84,6 +85,10 @@ public class ZooKeeperPersistentEphemeralNode {
         await(_executor, duration, unit);
     }
 
+    public boolean isClosed() {
+        return _closed.get();
+    }
+
     @VisibleForTesting
     CuratorFramework getCurator() {
         return _async._sync._curator;
@@ -101,6 +106,24 @@ public class ZooKeeperPersistentEphemeralNode {
     @VisibleForTesting
     public String getActualPath() throws ExecutionException, InterruptedException {
         return _async.getActualPath();
+    }
+
+    /**
+     * Gets the path for the node, not including namespace or unique ID.
+     * @return The base path of the ZooKeeper node.
+     */
+    @VisibleForTesting
+    public String getPath() {
+        return _async._sync._basePath;
+    }
+
+    /**
+     * Gets the data stored in the node.
+     * @return The data of this node.
+     */
+    @VisibleForTesting
+    public byte[] getData() {
+        return Arrays.copyOf(_async._sync._data, _async._sync._data.length);
     }
 
     private void await(CountDownLatch latch, long duration, TimeUnit unit) {

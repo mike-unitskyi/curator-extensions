@@ -147,6 +147,31 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
     }
 
     @Test
+    public void testRecreatesNodeWhenSessionReconnectsMultipleTimes() throws Exception {
+        CuratorFramework curator = newCurator();
+
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+        String path = node.getActualPath();
+
+        // We should be able to disconnect multiple times and each time the registry should re-create the node.
+        for (int i = 0; i < 5; i++) {
+            WatchTrigger deletionTrigger = new WatchTrigger();
+            curator.checkExists().usingWatcher(deletionTrigger).forPath(path);
+
+            // Kill the registry's session, thus cleaning up the node...
+            killSession(node.getCurator());
+
+            // Make sure the node ended up getting deleted...
+            assertTrue(deletionTrigger.firedWithin(10, TimeUnit.SECONDS));
+
+            // Now put a watch in the background looking to see if it gets created...
+            WatchTrigger creationTrigger = new WatchTrigger();
+            Stat stat = curator.checkExists().usingWatcher(creationTrigger).forPath(path);
+            assertTrue(stat != null || creationTrigger.firedWithin(10, TimeUnit.SECONDS));
+        }
+    }
+
+    @Test
     public void testRecreatesNodeWhenItGetsDeleted() throws Exception {
         CuratorFramework curator = newCurator();
 
@@ -173,6 +198,22 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         String path2 = node2.getActualPath();
 
         assertFalse(path1.equals(path2));
+    }
+
+    @Test
+    public void testIsNotClosed() throws Exception {
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+
+        assertFalse(node.isClosed());
+    }
+
+    @Test
+    public void testIsClosed() throws Exception {
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+
+        node.close(10, TimeUnit.SECONDS);
+
+        assertTrue(node.isClosed());
     }
 
     private ZooKeeperPersistentEphemeralNode createNode(String path) throws Exception {

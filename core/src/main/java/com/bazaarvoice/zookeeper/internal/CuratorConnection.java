@@ -1,6 +1,7 @@
 package com.bazaarvoice.zookeeper.internal;
 
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.RetryPolicy;
@@ -24,8 +25,15 @@ public class CuratorConnection implements ZooKeeperConnection {
     private final CuratorFramework _curator;
 
     public CuratorConnection(String connectString, RetryPolicy retryPolicy, String namespace) {
+        this(connectString, retryPolicy, namespace, CuratorFrameworkFactory.builder());
+    }
+
+    @VisibleForTesting
+    CuratorConnection(String connectString, RetryPolicy retryPolicy, String namespace,
+                      CuratorFrameworkFactory.Builder builder) {
         checkNotNull(connectString);
         checkNotNull(retryPolicy);
+        checkNotNull(builder);
 
         // An empty namespace means no namespace, in which case Curator expects namespace==null.
         if ("".equals(namespace)) {
@@ -39,7 +47,7 @@ public class CuratorConnection implements ZooKeeperConnection {
                 .build();
 
         try {
-            _curator = CuratorFrameworkFactory.builder()
+            _curator = builder
                     .connectString(connectString)
                     .retryPolicy(retryPolicy)
                     .namespace(namespace)
