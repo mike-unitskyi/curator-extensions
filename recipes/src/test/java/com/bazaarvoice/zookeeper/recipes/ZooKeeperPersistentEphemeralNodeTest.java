@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -210,36 +209,6 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
 
         assertTrue(Arrays.equals(curator.getData().forPath(node.getActualPath()), DATA));
-    }
-
-    @Test
-    public void testGetPath() throws Exception {
-        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-
-        assertEquals(PATH, node.getPath());
-    }
-
-    @Test
-    public void testGetData() throws Exception {
-        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-
-        assertTrue(Arrays.equals(DATA, node.getData()));
-    }
-
-    @Test
-    public void testIsNotClosed() throws Exception {
-        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-
-        assertFalse(node.isClosed());
-    }
-
-    @Test
-    public void testIsClosed() throws Exception {
-        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
-
-        node.close(10, TimeUnit.SECONDS);
-
-        assertTrue(node.isClosed());
     }
 
     private ZooKeeperPersistentEphemeralNode createNode(String path) throws Exception {
