@@ -125,9 +125,25 @@ public abstract class ZooKeeperTest {
     }
 
     public static class WatchTrigger extends Trigger implements Watcher {
+        private final Event.EventType _expected;
+
+        public static WatchTrigger creationTrigger() {
+            return new WatchTrigger(Event.EventType.NodeCreated);
+        }
+
+        public static WatchTrigger deletionTrigger() {
+            return new WatchTrigger(Event.EventType.NodeDeleted);
+        }
+
+        public WatchTrigger(Event.EventType expected) {
+            _expected = expected;
+        }
+
         @Override
         public void process(WatchedEvent event) {
-            this.fire();
+            if (_expected.equals(event.getType())) {
+                fire();
+            }
         }
     }
 }

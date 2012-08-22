@@ -99,7 +99,7 @@ public class ZooKeeperPersistentEphemeralNode {
      * @throws java.util.concurrent.ExecutionException Never.
      */
     @VisibleForTesting
-    public String getActualPath() throws ExecutionException, InterruptedException {
+    String getActualPath() throws ExecutionException, InterruptedException {
         return _async.getActualPath();
     }
 

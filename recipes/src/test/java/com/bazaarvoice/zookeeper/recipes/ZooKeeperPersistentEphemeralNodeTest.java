@@ -11,6 +11,7 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -116,7 +117,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         assertNodeExists(curator, node.getActualPath());
 
         // Register a watch that will fire when the node is deleted...
-        WatchTrigger deletedWatchTrigger = new WatchTrigger();
+        WatchTrigger deletedWatchTrigger = WatchTrigger.deletionTrigger();
         curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath());
 
         killSession(node.getCurator());
@@ -132,7 +133,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         ZooKeeperPersistentEphemeralNode node = createNode(PATH);
         assertNodeExists(curator, node.getActualPath());
 
-        WatchTrigger deletedWatchTrigger = new WatchTrigger();
+        WatchTrigger deletedWatchTrigger = WatchTrigger.deletionTrigger();
         curator.checkExists().usingWatcher(deletedWatchTrigger).forPath(node.getActualPath());
 
         killSession(node.getCurator());
@@ -141,9 +142,35 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         assertTrue(deletedWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
 
         // Check for it to be recreated...
-        WatchTrigger createdWatchTrigger = new WatchTrigger();
+        WatchTrigger createdWatchTrigger = WatchTrigger.creationTrigger();
         Stat stat = curator.checkExists().usingWatcher(createdWatchTrigger).forPath(node.getActualPath());
         assertTrue(stat != null || createdWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
+    }
+
+    @Test
+    public void testRecreatesNodeWhenSessionReconnectsMultipleTimes() throws Exception {
+        CuratorFramework curator = newCurator();
+
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+        String path = node.getActualPath();
+        assertNodeExists(curator, path);
+
+        // We should be able to disconnect multiple times and each time the node should be recreated.
+        for (int i = 0; i < 5; i++) {
+            WatchTrigger deletionTrigger = WatchTrigger.deletionTrigger();
+            curator.checkExists().usingWatcher(deletionTrigger).forPath(path);
+
+            // Kill the session, thus cleaning up the node...
+            killSession(node.getCurator());
+
+            // Make sure the node ended up getting deleted...
+            assertTrue(deletionTrigger.firedWithin(10, TimeUnit.SECONDS));
+
+            // Now put a watch in the background looking to see if it gets created...
+            WatchTrigger creationTrigger = WatchTrigger.creationTrigger();
+            Stat stat = curator.checkExists().usingWatcher(creationTrigger).forPath(path);
+            assertTrue(stat != null || creationTrigger.firedWithin(10, TimeUnit.SECONDS));
+        }
     }
 
     @Test
@@ -159,7 +186,7 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
 
         // Since we're using an ephemeral node, and the original session hasn't been interrupted the name of the new
         // node that gets created is going to be exactly the same as the original.
-        WatchTrigger createdWatchTrigger = new WatchTrigger();
+        WatchTrigger createdWatchTrigger = WatchTrigger.creationTrigger();
         Stat stat = curator.checkExists().usingWatcher(createdWatchTrigger).forPath(originalNode);
         assertTrue(stat != null || createdWatchTrigger.firedWithin(10, TimeUnit.SECONDS));
     }
@@ -173,6 +200,15 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         String path2 = node2.getActualPath();
 
         assertFalse(path1.equals(path2));
+    }
+
+    @Test
+    public void testData() throws Exception {
+        CuratorFramework curator = newCurator();
+
+        ZooKeeperPersistentEphemeralNode node = createNode(PATH);
+
+        assertTrue(Arrays.equals(curator.getData().forPath(node.getActualPath()), DATA));
     }
 
     private ZooKeeperPersistentEphemeralNode createNode(String path) throws Exception {
