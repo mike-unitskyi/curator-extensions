@@ -3,7 +3,6 @@ package com.bazaarvoice.zookeeper.internal;
 import org.apache.zookeeper.common.PathUtils;
 
 class Namespaces {
-
     static String normalize(String namespace) {
         // Pass null to Curator to indicate no namespace, but then CuratorFramework.getNamespace() will return the
         // empty string "".  So coerce the empty string to null to mean no namespace.

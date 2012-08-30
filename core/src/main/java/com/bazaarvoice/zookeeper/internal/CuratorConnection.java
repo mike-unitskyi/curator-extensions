@@ -2,6 +2,7 @@ package com.bazaarvoice.zookeeper.internal;
 
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.RetryPolicy;
@@ -64,7 +65,7 @@ public class CuratorConnection implements ZooKeeperConnection {
      * Private constructor for creating namespaced curator instances.
      */
     private CuratorConnection(CuratorFramework curator) {
-        checkState(!curator.getNamespace().isEmpty());
+        checkState(!Strings.isNullOrEmpty(curator.getNamespace()));
         _curator = curator;
         _namespace = curator.getNamespace();
     }

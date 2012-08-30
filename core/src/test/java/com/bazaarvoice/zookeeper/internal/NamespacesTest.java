@@ -6,7 +6,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 public class NamespacesTest {
-
     @Test
     public void testNormalizeNull() {
         assertNull(Namespaces.normalize(null));
