@@ -2,8 +2,10 @@ package com.bazaarvoice.zookeeper;
 
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.netflix.curator.RetryPolicy;
 import com.netflix.curator.retry.BoundedExponentialBackoffRetry;
+import org.apache.zookeeper.common.PathUtils;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -71,9 +73,13 @@ public class ZooKeeperConfiguration {
 
     /**
      * Sets a namespace that will be prefixed to every path used by the ZooKeeperConnection.
-     * Typically the namespace will be "/global" or the name of the local data center.
+     * Typically the namespace will be "/global" or the name of the local data center.  If non-empty, the namespace
+     * must be a valid ZooKeeper path (starts with '/', does not end with '/', etc).
      */
     public ZooKeeperConfiguration withNamespace(String namespace) {
+        if (!Strings.isNullOrEmpty(namespace)) {
+            PathUtils.validatePath(namespace);
+        }
         _namespace = namespace;
         return this;
     }

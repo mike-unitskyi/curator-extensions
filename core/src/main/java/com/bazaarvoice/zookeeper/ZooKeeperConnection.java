@@ -12,4 +12,12 @@ import java.io.Closeable;
  * ensemble.
  */
 public interface ZooKeeperConnection extends Closeable {
+
+    /**
+     * Returns a new instance of {@code ZooKeeperConnection} that shares the same underlying connection to ZooKeeper
+     * but scopes all reads and writes to the specified namespace.  If this connection itself is already scoped to a
+     * namespace, the new connection facade appends its new namespace to the current namespace.  If non-empty, the new
+     * namespace must be a valid ZooKeeper path (starts with '/', does not end with '/', etc).
+     */
+    ZooKeeperConnection withNamespace(String namespace);
 }

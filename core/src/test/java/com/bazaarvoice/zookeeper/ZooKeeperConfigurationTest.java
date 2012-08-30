@@ -39,4 +39,34 @@ public class ZooKeeperConfigurationTest {
     public void testZeroAttemptsBoundedExponentialBackoffRetry() {
         _config.withBoundedExponentialBackoffRetry(10, 100, 0);
     }
+
+    @Test
+    public void testNullNamespace() {
+        _config.withNamespace(null);
+    }
+
+    @Test
+    public void testEmptyNamespace() {
+        _config.withNamespace("");
+    }
+
+    @Test
+    public void testRootNamespace() {
+        _config.withNamespace("/");
+    }
+
+    @Test
+    public void testNamespace() {
+        _config.withNamespace("/parent");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testRelativeNamespace() {
+        _config.withNamespace("parent");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testTrailingSlashNamespace() {
+        _config.withNamespace("/parent/");
+    }
 }
