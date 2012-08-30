@@ -21,7 +21,7 @@ public class CuratorConnectionTest {
     private CuratorFrameworkFactory.Builder _builder;
     private final String _connectString = "localhost:2181";
     private final RetryPolicy _retry = mock(RetryPolicy.class);
-    private final String _namespace = "test";
+    private final String _namespace = "/test";
 
     @Before
     public void setup() throws IOException {

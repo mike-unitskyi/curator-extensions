@@ -45,7 +45,8 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
 
     /**
      * Sets a namespace that will be prefixed to every path used by the ZooKeeperConnection.
-     * Typically the namespace will be "/global" or the name of the local data center.
+     * Typically the namespace will be "/global" or the name of the local data center.  If non-empty, the namespace
+     * must be a valid ZooKeeper path (starts with '/', does not end with '/', etc).
      */
     @JsonProperty
     public ZooKeeperConfiguration setNamespace(String namespace) {
