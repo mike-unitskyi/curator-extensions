@@ -5,13 +5,13 @@
     <parent>
         <groupId>com.bazaarvoice.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>0.0.5</version>
+        <version>0.0.6-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <groupId>com.bazaarvoice.zookeeper</groupId>
     <artifactId>zookeeper-core</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>core</name>
