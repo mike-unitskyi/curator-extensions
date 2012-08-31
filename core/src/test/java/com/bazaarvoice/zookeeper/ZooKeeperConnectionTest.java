@@ -53,21 +53,21 @@ public class ZooKeeperConnectionTest {
     @Test
     public void testDefaultNamespace() {
         ZooKeeperConnection connection = connect(newConfiguration());
-        assertEquals("", ((CuratorConnection) connection).getNamespace());
+        assertEquals("", ((CuratorConnection) connection).getCurator().getNamespace());
     }
 
     @Test
     public void testNoNamespace() {
         for (String namespace : new String[] {null, "", "/"}) {
             ZooKeeperConnection connection = connect(newConfiguration().withNamespace(namespace));
-            assertEquals("", ((CuratorConnection) connection).getNamespace());
+            assertEquals("", ((CuratorConnection) connection).getCurator().getNamespace());
         }
     }
 
     @Test
     public void testNamespace() {
         ZooKeeperConnection connection = connect(newConfiguration().withNamespace("/parent"));
-        assertEquals("/parent", ((CuratorConnection) connection).getNamespace());
+        assertEquals("/parent", ((CuratorConnection) connection).getCurator().getNamespace());
     }
 
     @Test
@@ -75,7 +75,7 @@ public class ZooKeeperConnectionTest {
         ZooKeeperConnection connection = connect(newConfiguration());
         for (String namespace : new String[] {null, "", "/"}) {
             ZooKeeperConnection namespaced = connection.withNamespace(namespace);
-            assertEquals("", ((CuratorConnection) namespaced).getNamespace());
+            assertEquals("", ((CuratorConnection) namespaced).getCurator().getNamespace());
         }
     }
 
@@ -84,21 +84,21 @@ public class ZooKeeperConnectionTest {
         ZooKeeperConnection connection = connect(newConfiguration().withNamespace("/parent"));
         for (String namespace : new String[] {null, "", "/"}) {
             ZooKeeperConnection namespaced = connection.withNamespace(namespace);
-            assertEquals("/parent", ((CuratorConnection) namespaced).getNamespace());
+            assertEquals("/parent", ((CuratorConnection) namespaced).getCurator().getNamespace());
         }
     }
 
     @Test
     public void testNoNamespaceWithNamespace() {
         ZooKeeperConnection namespaced = connect(newConfiguration()).withNamespace("/child");
-        assertEquals("/child", ((CuratorConnection) namespaced).getNamespace());
+        assertEquals("/child", ((CuratorConnection) namespaced).getCurator().getNamespace());
     }
 
     @Test
     public void testNamespaceChain2() {
         ZooKeeperConnection namespaced = connect(newConfiguration().withNamespace("/parent"))
                 .withNamespace("/child");
-        assertEquals("/parent/child", ((CuratorConnection) namespaced).getNamespace());
+        assertEquals("/parent/child", ((CuratorConnection) namespaced).getCurator().getNamespace());
     }
 
     @Test
@@ -106,7 +106,7 @@ public class ZooKeeperConnectionTest {
         ZooKeeperConnection connection = connect(newConfiguration().withNamespace("/parent"))
                 .withNamespace("/child")
                 .withNamespace("/grandchild");
-        assertEquals("/parent/child/grandchild", ((CuratorConnection) connection).getNamespace());
+        assertEquals("/parent/child/grandchild", ((CuratorConnection) connection).getCurator().getNamespace());
     }
 
     @Test
@@ -114,7 +114,7 @@ public class ZooKeeperConnectionTest {
         ZooKeeperConnection connection = connect(newConfiguration().withNamespace("/a/b"))
                 .withNamespace("/c/d")
                 .withNamespace("/e/f");
-        assertEquals("/a/b/c/d/e/f", ((CuratorConnection) connection).getNamespace());
+        assertEquals("/a/b/c/d/e/f", ((CuratorConnection) connection).getCurator().getNamespace());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -125,15 +125,5 @@ public class ZooKeeperConnectionTest {
     @Test(expected = IllegalArgumentException.class)
     public void testWithEscapedNamespace() {
         connect(newConfiguration()).withNamespace("/../root");
-    }
-
-    @Test
-    public void testBrokenCuratorNamespace() {
-        ZooKeeperConnection connection = connect(newConfiguration().withNamespace("/parent"));
-        assertEquals("/parent", ((CuratorConnection) connection).getNamespace());
-
-        // Curator returns "" even when there's a namespace configured.  If/when this is fixed we can remove
-        // our CuratorConnection._namespace and rely on Curator's CuratorFramework.getNamespace() instead.
-        assertEquals("", ((CuratorConnection) connection).getCurator().getNamespace());
     }
 }
