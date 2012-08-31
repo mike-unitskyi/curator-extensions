@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.bazaarvoice.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>0.0.6-SNAPSHOT</version>
+        <version>0.0.6</version>
     </parent>
 
     <groupId>com.bazaarvoice.zookeeper</groupId>
     <artifactId>zookeeper-recipes</artifactId>
-    <version>0.0.6-SNAPSHOT</version>
+    <version>0.0.6</version>
     <packaging>jar</packaging>
 
     <name>recipes</name>
@@ -20,13 +20,13 @@
         <dependency>
             <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-core</artifactId>
-            <version>0.0.6-SNAPSHOT</version>
+            <version>0.0.6</version>
         </dependency>
 
         <dependency>
             <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-test</artifactId>
-            <version>0.0.6-SNAPSHOT</version>
+            <version>0.0.6</version>
             <scope>test</scope>
         </dependency>
 
