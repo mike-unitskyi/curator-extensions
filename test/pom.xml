@@ -10,7 +10,6 @@
 
     <groupId>com.bazaarvoice.zookeeper</groupId>
     <artifactId>zookeeper-test</artifactId>
-    <version>0.0.8-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>test</name>
@@ -20,7 +19,7 @@
         <dependency>
             <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-core</artifactId>
-            <version>0.0.8-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>

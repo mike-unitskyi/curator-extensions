@@ -10,7 +10,6 @@
 
     <groupId>com.bazaarvoice.zookeeper</groupId>
     <artifactId>zookeeper-recipes</artifactId>
-    <version>0.0.8-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>recipes</name>
@@ -20,13 +19,13 @@
         <dependency>
             <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-core</artifactId>
-            <version>0.0.8-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-test</artifactId>
-            <version>0.0.8-SNAPSHOT</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
 
