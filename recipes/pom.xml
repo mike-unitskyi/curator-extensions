@@ -23,6 +23,11 @@
         </dependency>
 
         <dependency>
+            <groupId>com.netflix.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.bazaarvoice.zookeeper</groupId>
             <artifactId>zookeeper-test</artifactId>
             <version>${project.version}</version>
