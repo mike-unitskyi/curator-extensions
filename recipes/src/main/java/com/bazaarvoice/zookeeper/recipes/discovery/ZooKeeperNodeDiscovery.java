@@ -4,7 +4,7 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -15,33 +15,29 @@ import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class ZooKeeperDiscovery<T> implements Closeable {
-    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperDiscovery.class);
-
+public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final CuratorFramework _curator;
-    private final Set<T> _nodes;
+    private final Map<String, T> _nodes;
     private final Set<NodeListener<T>> _listeners;
     private final PathChildrenCache _pathCache;
-    private final ChildDataParser<T> _childDataParser;
+    private final NodeDataParser<T> _nodeDataParser;
 
-    public ZooKeeperDiscovery(ZooKeeperConnection connection, String nodePath, ChildDataParser<T> parser) {
+    public ZooKeeperNodeDiscovery(ZooKeeperConnection connection, String nodePath, NodeDataParser<T> parser) {
         this(((CuratorConnection) checkNotNull(connection)).getCurator(), nodePath, parser);
     }
 
     @VisibleForTesting
-    ZooKeeperDiscovery(CuratorFramework curator, String nodePath, ChildDataParser<T> parser) {
+    ZooKeeperNodeDiscovery(CuratorFramework curator, String nodePath, NodeDataParser<T> parser) {
         checkNotNull(curator);
         checkNotNull(nodePath);
         checkNotNull(parser);
@@ -54,21 +50,21 @@ public class ZooKeeperDiscovery<T> implements Closeable {
             .build();
 
         _curator = curator;
-        _nodes = Sets.newSetFromMap(Maps.<T, Boolean>newConcurrentMap());
+        _nodes = Maps.newConcurrentMap();
         _listeners = Sets.newSetFromMap(Maps.<NodeListener<T>, Boolean>newConcurrentMap());
-        _childDataParser = parser;
+        _nodeDataParser = parser;
 
         _pathCache = new PathChildrenCache(_curator, nodePath, true, threadFactory);
         try {
-            _pathCache.getListenable().addListener(new ZkNodeListener());
+            _pathCache.getListenable().addListener(new PathListener());
 
-            // This must be synchronized so async remove events aren't processed between start() and adding end points.
+            // This must be synchronized so async remove events aren't processed between start() and adding nodes.
             // Use synchronous start(true) instead of asynchronous start(false) so we can tell when it's done and the
             // HostDiscovery set is usable.
             synchronized (this) {
                 _pathCache.start(true);
                 for (ChildData childData : _pathCache.getCurrentData()) {
-                    addNode(_childDataParser.parse(childData));
+                    addNode(childData.getPath(), _nodeDataParser.parse(childData.getData()));
                 }
             }
         } catch (Throwable t) {
@@ -78,11 +74,11 @@ public class ZooKeeperDiscovery<T> implements Closeable {
     }
 
     public Iterable<T> getNodes() {
-        return Iterables.unmodifiableIterable(_nodes);
+        return Iterables.unmodifiableIterable(_nodes.values());
     }
 
     public boolean contains(T node) {
-        return _nodes.contains(node);
+        return _nodes.containsValue(node);
     }
 
     public void addListener(NodeListener<T> listener) {
@@ -105,67 +101,83 @@ public class ZooKeeperDiscovery<T> implements Closeable {
         return _curator;
     }
 
-    private synchronized void addNode(T node) {
+    private synchronized void addNode(String path, T node) {
         // synchronize the modification of _nodes and firing of events so listeners always receive events in the
         // order they occur.
-        if (_nodes.add(node)) {
-            fireAddEvent(node);
+        if (_nodes.put(path, node) == null) {
+            fireAddEvent(path, node);
         }
     }
 
-    private synchronized void removeNode(T node) {
+    private synchronized void removeNode(String path, T node) {
         // synchronize the modification of _nodes and firing of events so listeners always receive events in the
         // order they occur.
-        if (_nodes.remove(node)) {
-            fireRemoveEvent(node);
+        if (_nodes.remove(path) != null) {
+            fireRemoveEvent(path, node);
         }
     }
 
-    private synchronized void clearEndPoints() {
+    private synchronized void updateNode(String path, T node) {
         // synchronize the modification of _nodes and firing of events so listeners always receive events in the
         // order they occur.
-        Collection<T> nodes = ImmutableList.copyOf(_nodes);
+        T oldNode = _nodes.put(path, node);
+        if (oldNode == null || !oldNode.equals(node)) {
+            fireUpdateEvent(path, node);
+        }
+    }
+
+    private synchronized void clearNodes() {
+        // synchronize the modification of _nodes and firing of events so listeners always receive events in the
+        // order they occur.
+        Map<String, T> nodes = ImmutableMap.copyOf(_nodes);
         _nodes.clear();
-        for (T node : nodes) {
-            fireRemoveEvent(node);
+        for (String path : nodes.keySet()) {
+            fireRemoveEvent(path, nodes.get(path));
         }
     }
 
-    private void fireAddEvent(T node) {
+    private void fireAddEvent(String path, T node) {
         for (NodeListener<T> listener : _listeners) {
-            listener.onNodeAdded(node);
+            listener.onNodeAdded(path, node);
         }
     }
 
-    private void fireRemoveEvent(T node) {
+    private void fireRemoveEvent(String path, T node) {
         for (NodeListener<T> listener : _listeners) {
-            listener.onNodeRemoved(node);
+            listener.onNodeRemoved(path, node);
+        }
+    }
+
+    private void fireUpdateEvent(String path, T node) {
+        for (NodeListener<T> listener : _listeners) {
+            listener.onNodeUpdated(path, node);
         }
     }
 
     /**
      * A curator <code>PathChildrenCacheListener</code>
      */
-    private final class ZkNodeListener implements PathChildrenCacheListener {
+    private final class PathListener implements PathChildrenCacheListener {
         @Override
         public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
             if (event.getType() == PathChildrenCacheEvent.Type.RESET) {
-                clearEndPoints();
+                clearNodes();
                 return;
             }
 
-            T endPoint = _childDataParser.parse(event.getData());
+            String nodePath = event.getData().getPath();
+            T nodeData = _nodeDataParser.parse(event.getData().getData());
             switch (event.getType()) {
                 case CHILD_ADDED:
-                    addNode(endPoint);
+                    addNode(nodePath, nodeData);
                     break;
 
                 case CHILD_REMOVED:
-                    removeNode(endPoint);
+                    removeNode(nodePath, nodeData);
                     break;
 
                 case CHILD_UPDATED:
-                    LOG.info("Node data changed unexpectedly. ZooKeeperPath {}", event.getData().getPath());
+                    updateNode(nodePath, nodeData);
                     break;
             }
         }
