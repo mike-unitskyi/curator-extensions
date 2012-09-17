@@ -230,6 +230,55 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
+    public void testParserReturnsValue() throws Exception {
+        AddedNodeTrigger trigger = new AddedNodeTrigger(FOO);
+        _nodeDiscovery.addListener(trigger);
+
+        register(FOO_BUCKET, FOO);
+        trigger.firedWithin(10, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testParserReturnsNull() throws Exception {
+        ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
+            newCurator(),
+            makeBasePath(FOO_BUCKET),
+            new NodeDataParser<Node>() {
+                @Override
+                public Node parse(byte[] nodeData) {
+                    return null;
+                }
+            }
+        );
+
+        AddedNodeTrigger trigger = new AddedNodeTrigger(null);
+        nodeDiscovery.addListener(trigger);
+
+        register(FOO_BUCKET, FOO);
+        trigger.firedWithin(10, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void testParserReturnsNullOnException() throws Exception {
+        ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
+            newCurator(),
+            makeBasePath(FOO_BUCKET),
+            new NodeDataParser<Node>() {
+                @Override
+                public Node parse(byte[] nodeData) {
+                    throw new RuntimeException();
+                }
+            }
+        );
+
+        AddedNodeTrigger trigger = new AddedNodeTrigger(null);
+        nodeDiscovery.addListener(trigger);
+
+        register(FOO_BUCKET, FOO);
+        trigger.firedWithin(10, TimeUnit.SECONDS);
+    }
+
+    @Test
     public void testAlreadyExistingNodesDoNotFireEvents() throws Exception {
         register(FOO_BUCKET, FOO);
 
@@ -401,6 +450,29 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     private static <T> boolean waitUntilSize(Iterable<T> iterable, int size) {
         return waitUntilSize(iterable, size, 10, TimeUnit.SECONDS);
+    }
+
+    private static final class AddedNodeTrigger extends Trigger implements NodeListener<Node> {
+        private final Node _expected;
+
+        public AddedNodeTrigger(Node expected) {
+            _expected = expected;
+        }
+
+        @Override
+        public void onNodeAdded(String path, Node node) {
+            if (Objects.equal(_expected, node)) {
+                fire();
+            }
+        }
+
+        @Override
+        public void onNodeRemoved(String path, Node node) {
+        }
+
+        @Override
+        public void onNodeUpdated(String path, Node node) {
+        }
     }
 
     private static final class NodeTrigger implements NodeListener<Node> {

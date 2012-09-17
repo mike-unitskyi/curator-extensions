@@ -25,6 +25,14 @@ import java.util.concurrent.ThreadFactory;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+/**
+ * The {@code ZooKeeperNodeDiscovery} class is used to watch a path in ZooKeeper. It will monitor which nodes
+ * exist and fire node change events to subscribed instances of {@code NodeListener}. Users of
+ * this class should not cache the results of discovery as subclasses can choose to change the set of available hosts
+ * based on some external mechanism (ex. using bouncer).
+ *
+ * @param <T> The type that will be used to represent an active node.
+ */
 public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final CuratorFramework _curator;
     private final Map<String, T> _nodes;
@@ -32,6 +40,13 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final PathChildrenCache _pathCache;
     private final NodeDataParser<T> _nodeDataParser;
 
+    /**
+     * Creates an instance of {@code ZooKeeperNodeDiscovery}.
+     *
+     * @param connection ZooKeeper connection.
+     * @param nodePath The path in ZooKeeper to watch.
+     * @param parser The strategy to convert from ZooKeeper {@code byte[]} to {@code T}.
+     */
     public ZooKeeperNodeDiscovery(ZooKeeperConnection connection, String nodePath, NodeDataParser<T> parser) {
         this(((CuratorConnection) checkNotNull(connection)).getCurator(), nodePath, parser);
     }
@@ -64,7 +79,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
             synchronized (this) {
                 _pathCache.start(true);
                 for (ChildData childData : _pathCache.getCurrentData()) {
-                    addNode(childData.getPath(), _nodeDataParser.parse(childData.getData()));
+                    addNode(childData.getPath(), parseChildData(childData));
                 }
             }
         } catch (Throwable t) {
@@ -73,18 +88,39 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         }
     }
 
+    /**
+     * Retrieve the available nodes.
+     *
+     * @return The available nodes.
+     */
     public Iterable<T> getNodes() {
         return Iterables.unmodifiableIterable(_nodes.values());
     }
 
+    /**
+     * Returns true if the specified node is a member of the iterable returned by {@link #getNodes()}.
+     *
+     * @param node The node to test.
+     * @return True if the specified node is a member of the iterable returned by {@link #getNodes()}.
+     */
     public boolean contains(T node) {
         return _nodes.containsValue(node);
     }
 
+    /**
+     * Add a node listener.
+     *
+     * @param listener The node listener to add.
+     */
     public void addListener(NodeListener<T> listener) {
         _listeners.add(listener);
     }
 
+    /**
+     * Remove a node listener.
+     *
+     * @param listener The node listener to remove.
+     */
     public void removeListener(NodeListener<T> listener) {
         _listeners.remove(listener);
     }
@@ -154,6 +190,16 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         }
     }
 
+    private T parseChildData(ChildData childData) {
+        T value = null;
+        try {
+            value = _nodeDataParser.parse(childData.getData());
+        } catch (Exception ignored) {
+        }
+
+        return value;
+    }
+
     /**
      * A curator <code>PathChildrenCacheListener</code>
      */
@@ -166,7 +212,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
             }
 
             String nodePath = event.getData().getPath();
-            T nodeData = _nodeDataParser.parse(event.getData().getData());
+            T nodeData = parseChildData(event.getData());
             switch (event.getType()) {
                 case CHILD_ADDED:
                     addNode(nodePath, nodeData);
