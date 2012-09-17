@@ -15,6 +15,8 @@ import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -34,6 +36,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @param <T> The type that will be used to represent an active node.
  */
 public class ZooKeeperNodeDiscovery<T> implements Closeable {
+    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperNodeDiscovery.class);
+
     private final CuratorFramework _curator;
     private final Map<String, T> _nodes;
     private final Set<NodeListener<T>> _listeners;
@@ -44,8 +48,8 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      * Creates an instance of {@code ZooKeeperNodeDiscovery}.
      *
      * @param connection ZooKeeper connection.
-     * @param nodePath The path in ZooKeeper to watch.
-     * @param parser The strategy to convert from ZooKeeper {@code byte[]} to {@code T}.
+     * @param nodePath   The path in ZooKeeper to watch.
+     * @param parser     The strategy to convert from ZooKeeper {@code byte[]} to {@code T}.
      */
     public ZooKeeperNodeDiscovery(ZooKeeperConnection connection, String nodePath, NodeDataParser<T> parser) {
         this(((CuratorConnection) checkNotNull(connection)).getCurator(), nodePath, parser);
@@ -194,7 +198,9 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         T value = null;
         try {
             value = _nodeDataParser.parse(childData.getData());
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOG.info("NodeDataParser failed to parse ZooKeeper data. ZooKeeperPath: {}; Exception Message: {}",
+                childData.getPath(), e.getMessage());
         }
 
         return value;
