@@ -58,10 +58,10 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     private void register(String path, Node node) throws Exception {
         ZooKeeperPersistentEphemeralNode zkNode = new ZooKeeperPersistentEphemeralNode(
-            newZooKeeperConnection(),
-            makePath(path, node),
-            node.getName().getBytes(Charsets.UTF_8),
-            CreateMode.EPHEMERAL_SEQUENTIAL
+                newZooKeeperConnection(),
+                makePath(path, node),
+                node.getName().getBytes(Charsets.UTF_8),
+                CreateMode.EPHEMERAL_SEQUENTIAL
         );
 
         _nodes.put(node.getName(), zkNode);
@@ -159,9 +159,9 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         // Create the NodeDiscovery after registration is done so there's at least one initial node
         register(FOO_BUCKET, FOO);
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-            newCurator(),
-            makeBasePath(FOO_BUCKET),
-            Node.PARSER
+                newCurator(),
+                makeBasePath(FOO_BUCKET),
+                Node.PARSER
         );
 
         assertEquals(Iterables.size(nodeDiscovery.getNodes()), 1);
@@ -241,14 +241,14 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     @Test
     public void testParserReturnsNull() throws Exception {
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-            newCurator(),
-            makeBasePath(FOO_BUCKET),
-            new NodeDataParser<Node>() {
-                @Override
-                public Node parse(byte[] nodeData) {
-                    return null;
+                newCurator(),
+                makeBasePath(FOO_BUCKET),
+                new NodeDataParser<Node>() {
+                    @Override
+                    public Node parse(byte[] nodeData) {
+                        return null;
+                    }
                 }
-            }
         );
 
         AddedNodeTrigger trigger = new AddedNodeTrigger(null);
@@ -261,14 +261,14 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     @Test
     public void testParserReturnsNullOnException() throws Exception {
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-            newCurator(),
-            makeBasePath(FOO_BUCKET),
-            new NodeDataParser<Node>() {
-                @Override
-                public Node parse(byte[] nodeData) {
-                    throw new RuntimeException();
+                newCurator(),
+                makeBasePath(FOO_BUCKET),
+                new NodeDataParser<Node>() {
+                    @Override
+                    public Node parse(byte[] nodeData) {
+                        throw new RuntimeException();
+                    }
                 }
-            }
         );
 
         AddedNodeTrigger trigger = new AddedNodeTrigger(null);
@@ -283,9 +283,9 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         register(FOO_BUCKET, FOO);
 
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-            newCurator(),
-            makeBasePath(FOO_BUCKET),
-            Node.PARSER
+                newCurator(),
+                makeBasePath(FOO_BUCKET),
+                Node.PARSER
         );
 
         assertEquals(Iterables.size(nodeDiscovery.getNodes()), 1);
@@ -427,9 +427,9 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         // Unregister FOO and create a new NodeDiscovery instance as close together as we can, so they race.
         unregister(FOO);
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-            curator,
-            makeBasePath(FOO_BUCKET),
-            Node.PARSER
+                curator,
+                makeBasePath(FOO_BUCKET),
+                Node.PARSER
         );
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 0));

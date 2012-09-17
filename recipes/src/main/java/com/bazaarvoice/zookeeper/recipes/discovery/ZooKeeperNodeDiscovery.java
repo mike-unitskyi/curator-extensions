@@ -64,9 +64,9 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         checkArgument(!"".equals(nodePath));
 
         ThreadFactory threadFactory = new ThreadFactoryBuilder()
-            .setNameFormat(getClass().getSimpleName() + "(" + nodePath + ")-%d")
-            .setDaemon(true)
-            .build();
+                .setNameFormat(getClass().getSimpleName() + "(" + nodePath + ")-%d")
+                .setDaemon(true)
+                .build();
 
         _curator = curator;
         _nodes = Maps.newConcurrentMap();
@@ -200,7 +200,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
             value = _nodeDataParser.parse(childData.getData());
         } catch (Exception e) {
             LOG.warn("NodeDataParser failed to parse ZooKeeper data. ZooKeeperPath: {}; Exception Message: {}",
-                childData.getPath(), e.getMessage());
+                    childData.getPath(), e.getMessage());
             LOG.warn("Exception", e);
         }
 
