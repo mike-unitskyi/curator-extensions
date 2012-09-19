@@ -3,6 +3,9 @@ package com.bazaarvoice.zookeeper.recipes.discovery;
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Function;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -39,7 +42,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperNodeDiscovery.class);
 
     private final CuratorFramework _curator;
-    private final Map<String, T> _nodes;
+    private final Map<String, Optional<T>> _nodes;
     private final Set<NodeListener<T>> _listeners;
     private final PathChildrenCache _pathCache;
     private final NodeDataParser<T> _nodeDataParser;
@@ -98,7 +101,12 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      * @return The available nodes.
      */
     public Iterable<T> getNodes() {
-        return Iterables.unmodifiableIterable(_nodes.values());
+        return Iterables.transform(Iterables.unmodifiableIterable(_nodes.values()), new Function<Optional<T>, T>() {
+            @Override
+            public T apply(Optional<T> input) {
+                return input.orNull();
+            }
+        });
     }
 
     /**
@@ -108,7 +116,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      * @return True if the specified node is a member of the iterable returned by {@link #getNodes()}.
      */
     public boolean contains(T node) {
-        return _nodes.containsValue(node);
+        return _nodes.containsValue(Optional.fromNullable(node));
     }
 
     /**
@@ -144,7 +152,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private synchronized void addNode(String path, T node) {
         // synchronize the modification of _nodes and firing of events so listeners always receive events in the
         // order they occur.
-        if (_nodes.put(path, node) == null) {
+        if (_nodes.put(path, Optional.fromNullable(node)) == null) {
             fireAddEvent(path, node);
         }
     }
@@ -160,8 +168,8 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private synchronized void updateNode(String path, T node) {
         // synchronize the modification of _nodes and firing of events so listeners always receive events in the
         // order they occur.
-        T oldNode = _nodes.put(path, node);
-        if (oldNode == null || !oldNode.equals(node)) {
+        Optional<T> oldNode = _nodes.put(path, Optional.fromNullable(node));
+        if (!Objects.equal(oldNode.orNull(), node)) {
             fireUpdateEvent(path, node);
         }
     }
@@ -169,10 +177,10 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private synchronized void clearNodes() {
         // synchronize the modification of _nodes and firing of events so listeners always receive events in the
         // order they occur.
-        Map<String, T> nodes = ImmutableMap.copyOf(_nodes);
+        Map<String, Optional<T>> nodes = ImmutableMap.copyOf(_nodes);
         _nodes.clear();
         for (String path : nodes.keySet()) {
-            fireRemoveEvent(path, nodes.get(path));
+            fireRemoveEvent(path, nodes.get(path).orNull());
         }
     }
 

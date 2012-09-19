@@ -209,6 +209,24 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
+    public void testNullValuesRemainValidNodes() throws Exception {
+        register(FOO_BUCKET, FOO);
+        register(FOO_BUCKET, BAR);
+
+        ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), new NodeDataParser<Node>() {
+            @Override
+            public Node parse(byte[] nodeData) {
+                return null;
+            }
+        });
+
+        assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 2));
+        for (Node node : nodeDiscovery.getNodes()) {
+            assertEquals(node, null);
+        }
+    }
+
+    @Test
     public void testUpdateOnlyUpdateEventFired() throws Exception {
         String nodePath = ZKPaths.makePath(FOO_BUCKET, "UpdatingNode");
         CuratorFramework curator = newCurator();
