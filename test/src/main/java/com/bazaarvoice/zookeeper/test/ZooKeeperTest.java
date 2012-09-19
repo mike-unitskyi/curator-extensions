@@ -1,8 +1,8 @@
 package com.bazaarvoice.zookeeper.test;
 
-import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.bazaarvoice.zookeeper.ZooKeeperConfiguration;
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
+import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
@@ -52,7 +52,9 @@ public abstract class ZooKeeperTest {
 
     public ZooKeeperConnection newZooKeeperConnection() throws Exception {
         // For test case purposes don't retry at all.  This should never be done in production!!!
-        return newZooKeeperConnection(new ZooKeeperConfiguration().withBoundedExponentialBackoffRetry(100, 1000, 1));
+        return newZooKeeperConnection(new ZooKeeperConfiguration()
+                .withConnectString("localhost:2181")
+                .withBoundedExponentialBackoffRetry(100, 1000, 1));
     }
 
     public ZooKeeperConnection newZooKeeperConnection(ZooKeeperConfiguration configuration) {
@@ -96,6 +98,7 @@ public abstract class ZooKeeperTest {
         return newMockZooKeeperConnection(curator);
     }
 
+    @SuppressWarnings("unused")
     public void killSession(ZooKeeperConnection connection) throws Exception {
         killSession(((CuratorConnection)connection).getCurator());
     }
