@@ -19,7 +19,7 @@
     <dependencies>
         <dependency>
             <groupId>com.bazaarvoice.chameleon</groupId>
-            <artifactId>chameleon</artifactId>
+            <artifactId>chameleon-core</artifactId>
         </dependency>
 
         <dependency>

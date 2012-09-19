@@ -106,8 +106,8 @@
 
             <dependency>
                 <groupId>com.bazaarvoice.chameleon</groupId>
-                <artifactId>chameleon</artifactId>
-                <version>0.1.0</version>
+                <artifactId>chameleon-core</artifactId>
+                <version>0.1.1</version>
             </dependency>
 
             <dependency>
