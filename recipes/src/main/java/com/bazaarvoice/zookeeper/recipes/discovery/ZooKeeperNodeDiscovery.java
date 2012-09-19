@@ -18,7 +18,6 @@ import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
-import com.sun.istack.internal.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,7 +103,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     public Iterable<T> getNodes() {
         return Iterables.transform(Iterables.unmodifiableIterable(_nodes.values()), new Function<Optional<T>, T>() {
             @Override
-            public T apply(@Nullable Optional<T> input) {
+            public T apply(Optional<T> input) {
                 return input.orNull();
             }
         });
