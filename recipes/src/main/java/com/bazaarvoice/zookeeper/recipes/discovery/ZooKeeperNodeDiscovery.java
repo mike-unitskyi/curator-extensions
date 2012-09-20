@@ -8,7 +8,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closeables;
@@ -23,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -100,8 +100,8 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      *
      * @return The available nodes.
      */
-    public Iterable<T> getNodes() {
-        return Iterables.transform(Iterables.unmodifiableIterable(_nodes.values()), new Function<Optional<T>, T>() {
+    public Map<String, T> getNodes() {
+        return Maps.transformValues(Collections.unmodifiableMap(_nodes), new Function<Optional<T>, T>() {
             @Override
             public T apply(Optional<T> input) {
                 return input.orNull();
@@ -179,6 +179,9 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         // order they occur.
         Map<String, Optional<T>> nodes = ImmutableMap.copyOf(_nodes);
         _nodes.clear();
+
+        fireResetEvent();
+
         for (String path : nodes.keySet()) {
             fireRemoveEvent(path, nodes.get(path).orNull());
         }
@@ -199,6 +202,12 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private void fireUpdateEvent(String path, T node) {
         for (NodeListener<T> listener : _listeners) {
             listener.onNodeUpdated(path, node);
+        }
+    }
+
+    private void fireResetEvent() {
+        for (NodeListener<T> listener : _listeners) {
+            listener.onZooKeeperReset();
         }
     }
 
