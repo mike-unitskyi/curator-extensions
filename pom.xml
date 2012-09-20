@@ -41,6 +41,12 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>com.bazaarvoice.chameleon</groupId>
+                <artifactId>chameleon-core</artifactId>
+                <version>0.1.1</version>
+            </dependency>
+
+            <dependency>
                 <groupId>com.netflix.curator</groupId>
                 <artifactId>curator-framework</artifactId>
                 <version>${curator.version}</version>
@@ -102,12 +108,6 @@
                 <groupId>com.netflix.curator</groupId>
                 <artifactId>curator-test</artifactId>
                 <version>${curator.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.bazaarvoice.chameleon</groupId>
-                <artifactId>chameleon-core</artifactId>
-                <version>0.1.1</version>
             </dependency>
 
             <dependency>

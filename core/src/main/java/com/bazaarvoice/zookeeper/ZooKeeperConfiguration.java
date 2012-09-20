@@ -29,7 +29,7 @@ public class ZooKeeperConfiguration {
      * @return A new {@link ZooKeeperConnection} with the current configuration settings.
      */
     public ZooKeeperConnection connect() {
-        if (null == _connectString) {
+        if (_connectString == null) {
             _connectString = Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue();
         }
         return new CuratorConnection(_connectString, _retryPolicy, _namespace);
