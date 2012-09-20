@@ -205,7 +205,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private T parseChildData(ChildData childData) {
         T value = null;
         try {
-            value = _nodeDataParser.parse(childData.getData());
+            value = _nodeDataParser.parse(childData.getPath(), childData.getData());
         } catch (Exception e) {
             LOG.warn("NodeDataParser failed to parse ZooKeeper data. ZooKeeperPath: {}; Exception Message: {}",
                     childData.getPath(), e.getMessage());
