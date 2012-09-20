@@ -97,6 +97,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     public void setup() throws Exception {
         super.setup();
         _nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), Node.PARSER);
+        _nodeDiscovery.start();
     }
 
     @Override
@@ -165,6 +166,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
+        nodeDiscovery.start();
 
         assertEquals(Iterables.size(nodeDiscovery.getNodes().values()), 1);
     }
@@ -224,6 +226,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                         return null;
                     }
                 });
+        nodeDiscovery.start();
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 2));
         for (Node node : nodeDiscovery.getNodes().values()) {
@@ -273,6 +276,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                     }
                 }
         );
+        nodeDiscovery.start();
 
         NodeTrigger trigger = new NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
@@ -293,6 +297,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                     }
                 }
         );
+        nodeDiscovery.start();
 
         NodeTrigger trigger = new NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
@@ -310,6 +315,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
+        nodeDiscovery.start();
 
         assertEquals(Iterables.size(nodeDiscovery.getNodes().values()), 1);
 
@@ -464,6 +470,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
+        nodeDiscovery.start();
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 0));
     }

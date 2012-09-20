@@ -75,8 +75,13 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         _nodes = Maps.newConcurrentMap();
         _listeners = Sets.newSetFromMap(Maps.<NodeListener<T>, Boolean>newConcurrentMap());
         _nodeDataParser = parser;
-
         _pathCache = new PathChildrenCache(_curator, nodePath, true, threadFactory);
+    }
+
+    /**
+     * Start the NodeDiscovery. The NodeDiscovery is not started automatically. You must call this method.
+     */
+    public void start() {
         try {
             _pathCache.getListenable().addListener(new PathListener());
 

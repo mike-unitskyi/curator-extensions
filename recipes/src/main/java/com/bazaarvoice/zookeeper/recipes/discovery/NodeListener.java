@@ -31,8 +31,9 @@ public interface NodeListener<T> {
     void onNodeUpdated(String path, T node);
 
     /**
-     * Notification that ZooKeeper's connection was reset. The semantics of a reset imply that onNodeRemoved() is going
-     * to be called for each currently active node immediately following this reset event.
+     * Notification that ZooKeeper's connection was Suspend, Lost, or Reconnected. The semantics of a reset imply that
+     * onNodeRemoved() is going to be called for each currently active node immediately following this reset event. If
+     * this was due to a Reconnected event then onNodeAdded() will be called for each node already active in ZooKeeper.
      */
     void onZooKeeperReset();
 }
