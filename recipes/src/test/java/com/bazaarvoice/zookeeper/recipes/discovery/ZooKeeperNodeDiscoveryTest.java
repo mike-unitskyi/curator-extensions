@@ -48,8 +48,8 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
         public static final NodeDataParser<Node> PARSER = new NodeDataParser<Node>() {
             @Override
-            public Node parse(byte[] input) {
-                return new Node(new String(input, Charsets.UTF_8));
+            public Node parse(String path, byte[] data) {
+                return new Node(new String(data, Charsets.UTF_8));
             }
         };
     }
@@ -213,12 +213,15 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         register(FOO_BUCKET, FOO);
         register(FOO_BUCKET, BAR);
 
-        ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), new NodeDataParser<Node>() {
-            @Override
-            public Node parse(byte[] nodeData) {
-                return null;
-            }
-        });
+        ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
+                newCurator(),
+                makeBasePath(FOO_BUCKET),
+                new NodeDataParser<Node>() {
+                    @Override
+                    public Node parse(String path, byte[] nodeData) {
+                        return null;
+                    }
+                });
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 2));
         for (Node node : nodeDiscovery.getNodes()) {
@@ -263,7 +266,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 new NodeDataParser<Node>() {
                     @Override
-                    public Node parse(byte[] nodeData) {
+                    public Node parse(String path, byte[] nodeData) {
                         return null;
                     }
                 }
@@ -283,7 +286,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 new NodeDataParser<Node>() {
                     @Override
-                    public Node parse(byte[] nodeData) {
+                    public Node parse(String path, byte[] nodeData) {
                         throw new RuntimeException();
                     }
                 }
