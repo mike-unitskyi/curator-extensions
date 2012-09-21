@@ -5,6 +5,7 @@ import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
@@ -16,6 +17,7 @@ import org.junit.Test;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -95,6 +97,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     public void setup() throws Exception {
         super.setup();
         _nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), Node.PARSER);
+        _nodeDiscovery.start();
     }
 
     @Override
@@ -150,7 +153,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         register(FOO_BUCKET, FOO);
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
         _nodeDiscovery.close();
-        assertTrue(Iterables.isEmpty(_nodeDiscovery.getNodes()));
+        assertTrue(Iterables.isEmpty(_nodeDiscovery.getNodes().values()));
         _nodeDiscovery = null;
     }
 
@@ -163,8 +166,9 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
+        nodeDiscovery.start();
 
-        assertEquals(Iterables.size(nodeDiscovery.getNodes()), 1);
+        assertEquals(Iterables.size(nodeDiscovery.getNodes().values()), 1);
     }
 
     @Test
@@ -205,7 +209,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
         assertTrue(trigger.updatedWithin(10, TimeUnit.SECONDS));
 
-        assertEquals(Iterables.size(_nodeDiscovery.getNodes()), 1);
+        assertEquals(Iterables.size(_nodeDiscovery.getNodes().values()), 1);
     }
 
     @Test
@@ -222,9 +226,10 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                         return null;
                     }
                 });
+        nodeDiscovery.start();
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 2));
-        for (Node node : nodeDiscovery.getNodes()) {
+        for (Node node : nodeDiscovery.getNodes().values()) {
             assertEquals(node, null);
         }
     }
@@ -246,17 +251,17 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
         assertTrue(trigger.updatedWithin(10, TimeUnit.SECONDS));
 
-        assertEquals(Iterables.size(_nodeDiscovery.getNodes()), 1);
+        assertEquals(Iterables.size(_nodeDiscovery.getNodes().values()), 1);
         assertEquals(counter.getNumUpdates(), 1);
     }
 
     @Test
     public void testParserReturnsValue() throws Exception {
-        AddedNodeTrigger trigger = new AddedNodeTrigger(FOO);
+        NodeTrigger trigger = new NodeTrigger(FOO);
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
-        trigger.firedWithin(10, TimeUnit.SECONDS);
+        trigger.addedWithin(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -271,12 +276,13 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                     }
                 }
         );
+        nodeDiscovery.start();
 
-        AddedNodeTrigger trigger = new AddedNodeTrigger(null);
+        NodeTrigger trigger = new NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
-        trigger.firedWithin(10, TimeUnit.SECONDS);
+        trigger.addedWithin(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -291,12 +297,13 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                     }
                 }
         );
+        nodeDiscovery.start();
 
-        AddedNodeTrigger trigger = new AddedNodeTrigger(null);
+        NodeTrigger trigger = new NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
-        trigger.firedWithin(10, TimeUnit.SECONDS);
+        trigger.addedWithin(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -308,8 +315,9 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
+        nodeDiscovery.start();
 
-        assertEquals(Iterables.size(nodeDiscovery.getNodes()), 1);
+        assertEquals(Iterables.size(nodeDiscovery.getNodes().values()), 1);
 
         CountingListener eventCounter = new CountingListener();
         nodeDiscovery.addListener(eventCounter);
@@ -437,6 +445,16 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
+    public void testZooKeeperResetFires() throws Exception {
+        NodeTrigger trigger = new NodeTrigger();
+        _nodeDiscovery.addListener(trigger);
+
+        killSession(_nodeDiscovery.getCurator());
+
+        assertTrue(trigger.resetWithin(10, TimeUnit.SECONDS));
+    }
+
+    @Test
     public void testInitializeRacesRemove() throws Exception {
         // Create a new ZK connection now so it's ready-to-go when we need it.
         CuratorFramework curator = newCurator();
@@ -452,14 +470,15 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
+        nodeDiscovery.start();
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 0));
     }
 
-    private static <T> boolean waitUntilSize(Iterable<T> iterable, int size, long timeout, TimeUnit unit) {
+    private static <K, T> boolean waitUntilSize(Map<K, T> map, int size, long timeout, TimeUnit unit) {
         long start = System.nanoTime();
         while (System.nanoTime() - start <= unit.toNanos(timeout)) {
-            if (Iterables.size(iterable) == size) {
+            if (map.size() == size) {
                 return true;
             }
 
@@ -469,51 +488,56 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         return false;
     }
 
-    private static <T> boolean waitUntilSize(Iterable<T> iterable, int size) {
-        return waitUntilSize(iterable, size, 10, TimeUnit.SECONDS);
+    private static <K, T> boolean waitUntilSize(Map<K, T> map, int size) {
+        return waitUntilSize(map, size, 10, TimeUnit.SECONDS);
     }
 
-    private static final class AddedNodeTrigger extends Trigger implements NodeListener<Node> {
-        private final Node _expected;
+    private static final class NodeTrigger implements NodeListener<Node> {
+        private final Optional<Node> _expected;
 
-        public AddedNodeTrigger(Node expected) {
+        private final Trigger _addTrigger = new Trigger();
+        private final Trigger _removeTrigger = new Trigger();
+        private final Trigger _updateTrigger = new Trigger();
+        private final Trigger _resetTrigger = new Trigger();
+
+        public NodeTrigger() {
+            this(Optional.<Node>absent());
+        }
+
+        public NodeTrigger(Node expected) {
+            this(Optional.fromNullable(expected));
+        }
+
+        public NodeTrigger(Optional<Node> expected) {
+            checkNotNull(expected);
+
             _expected = expected;
         }
 
         @Override
         public void onNodeAdded(String path, Node node) {
-            if (Objects.equal(_expected, node)) {
-                fire();
+            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
+                _addTrigger.fire();
             }
         }
 
         @Override
         public void onNodeRemoved(String path, Node node) {
+            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
+                _removeTrigger.fire();
+            }
         }
 
         @Override
         public void onNodeUpdated(String path, Node node) {
-        }
-    }
-
-    private static final class NodeTrigger implements NodeListener<Node> {
-        private final Trigger _addTrigger = new Trigger();
-        private final Trigger _removeTrigger = new Trigger();
-        private final Trigger _updateTrigger = new Trigger();
-
-        @Override
-        public void onNodeAdded(String path, Node node) {
-            _addTrigger.fire();
+            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
+                _updateTrigger.fire();
+            }
         }
 
         @Override
-        public void onNodeRemoved(String path, Node node) {
-            _removeTrigger.fire();
-        }
-
-        @Override
-        public void onNodeUpdated(String path, Node node) {
-            _updateTrigger.fire();
+        public void onZooKeeperReset() {
+            _resetTrigger.fire();
         }
 
         public boolean addedWithin(long duration, TimeUnit unit) throws InterruptedException {
@@ -527,12 +551,17 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         public boolean updatedWithin(long duration, TimeUnit unit) throws InterruptedException {
             return _updateTrigger.firedWithin(duration, unit);
         }
+
+        public boolean resetWithin(long duration, TimeUnit unit) throws InterruptedException {
+            return _resetTrigger.firedWithin(duration, unit);
+        }
     }
 
     private static final class CountingListener implements NodeListener<Node> {
         private int _numAdds;
         private int _numRemoves;
         private int _numUpdates;
+        private int _numResets;
 
         @Override
         public void onNodeAdded(String path, Node node) {
@@ -549,6 +578,11 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
             _numUpdates++;
         }
 
+        @Override
+        public void onZooKeeperReset() {
+            _numResets++;
+        }
+
         public int getNumAdds() {
             return _numAdds;
         }
@@ -557,12 +591,16 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
             return _numRemoves;
         }
 
+        public int getNumResets() {
+            return _numResets;
+        }
+
         public int getNumUpdates() {
             return _numUpdates;
         }
 
         public int getNumEvents() {
-            return _numAdds + _numRemoves + _numUpdates;
+            return _numAdds + _numRemoves + _numUpdates + _numResets;
         }
     }
 }
