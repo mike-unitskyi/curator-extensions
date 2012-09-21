@@ -18,6 +18,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.bazaarvoice.chameleon</groupId>
+            <artifactId>chameleon-core</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.netflix.curator</groupId>
             <artifactId>curator-framework</artifactId>
         </dependency>

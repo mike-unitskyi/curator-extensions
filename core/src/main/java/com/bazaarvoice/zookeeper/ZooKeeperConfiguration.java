@@ -1,5 +1,6 @@
 package com.bazaarvoice.zookeeper;
 
+import com.bazaarvoice.chameleon.Chameleon;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -17,18 +18,29 @@ import static com.google.common.base.Preconditions.checkArgument;
  * dropwizard services.
  */
 public class ZooKeeperConfiguration {
-    private String _connectString = "localhost:2181";
+    private String _connectString = null;
     private RetryPolicy _retryPolicy = new BoundedExponentialBackoffRetry(100, 1000, 5);
     private String _namespace;
 
     /**
-     * Returns a new {@link ZooKeeperConnection} with the current configuration settings.
+     * Returns a new {@link ZooKeeperConnection} with the current configuration settings. If the connection string
+     * has not been explicitly set, {@link Chameleon} will attempt to infer the correct connection string prior
+     * to connecting.
      * @return A new {@link ZooKeeperConnection} with the current configuration settings.
      */
     public ZooKeeperConnection connect() {
+        if (_connectString == null) {
+            _connectString = Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue();
+        }
         return new CuratorConnection(_connectString, _retryPolicy, _namespace);
     }
 
+    /**
+     * NOTE: If no connect string has been explicitly set, this method will return the default value, {@code null}.
+     * However, {@link Chameleon} will attempt to infer a connection string when {@link #connect()} is called.
+     * @return String representation of the ZooKeeper ensemble that this configuration points to.  {@code null}
+     * indicates that this has not been explicitly set.
+     */
     @VisibleForTesting
     protected String getConnectString() {
         return _connectString;

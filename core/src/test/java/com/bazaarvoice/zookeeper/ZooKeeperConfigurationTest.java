@@ -1,6 +1,12 @@
 package com.bazaarvoice.zookeeper;
 
+import com.bazaarvoice.chameleon.Chameleon;
+import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import org.junit.Test;
+
+import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
 
 public class ZooKeeperConfigurationTest {
     private ZooKeeperConfiguration _config = new ZooKeeperConfiguration();
@@ -68,5 +74,13 @@ public class ZooKeeperConfigurationTest {
     @Test(expected = IllegalArgumentException.class)
     public void testTrailingSlashNamespace() {
         _config.withNamespace("/parent/");
+    }
+
+    @Test
+    public void testChameleonUsed() throws IOException {
+        CuratorConnection connection = (CuratorConnection) _config.connect();
+        assertEquals(Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue(),
+                connection.getCurator().getZookeeperClient().getCurrentConnectionString());
+        connection.close();
     }
 }
