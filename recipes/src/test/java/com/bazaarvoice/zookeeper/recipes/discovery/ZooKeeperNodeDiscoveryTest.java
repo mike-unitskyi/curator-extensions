@@ -478,7 +478,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     private static <K, T> boolean waitUntilSize(Map<K, T> map, int size, long timeout, TimeUnit unit) {
         long start = System.nanoTime();
         while (System.nanoTime() - start <= unit.toNanos(timeout)) {
-            if (Iterables.size(map.values()) == size) {
+            if (map.size() == size) {
                 return true;
             }
 
