@@ -6,7 +6,6 @@ import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.netflix.curator.framework.CuratorFramework;
@@ -18,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -113,17 +113,17 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test (expected = NullPointerException.class)
-    public void testNullConfiguration() {
+    public void testNullConnection() {
         new ZooKeeperNodeDiscovery<Node>((ZooKeeperConnection) null, makeBasePath(FOO_BUCKET), Node.PARSER);
     }
 
     @Test (expected = NullPointerException.class)
-    public void testNullServiceName() throws Exception {
+    public void testNullPath() throws Exception {
         new ZooKeeperNodeDiscovery<Node>(newCurator(), null, Node.PARSER);
     }
 
     @Test (expected = IllegalArgumentException.class)
-    public void testEmptyServiceName() throws Exception {
+    public void testEmptyPath() throws Exception {
         new ZooKeeperNodeDiscovery<Node>(newCurator(), "", Node.PARSER);
     }
 
@@ -133,13 +133,13 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testRegisterService() throws Exception {
+    public void testRegisterNode() throws Exception {
         register(FOO_BUCKET, FOO);
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
     }
 
     @Test
-    public void testUnregisterService() throws Exception {
+    public void testUnregisterNode() throws Exception {
         register(FOO_BUCKET, FOO);
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
@@ -153,7 +153,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         register(FOO_BUCKET, FOO);
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
         _nodeDiscovery.close();
-        assertTrue(Iterables.isEmpty(_nodeDiscovery.getNodes().values()));
+        assertTrue(_nodeDiscovery.getNodes().isEmpty());
         _nodeDiscovery = null;
     }
 
@@ -168,7 +168,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         );
         nodeDiscovery.start();
 
-        assertEquals(Iterables.size(nodeDiscovery.getNodes().values()), 1);
+        assertEquals(1, nodeDiscovery.getNodes().size());
     }
 
     @Test
@@ -209,7 +209,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
         assertTrue(trigger.updatedWithin(10, TimeUnit.SECONDS));
 
-        assertEquals(Iterables.size(_nodeDiscovery.getNodes().values()), 1);
+        assertEquals(1, _nodeDiscovery.getNodes().size());
     }
 
     @Test
@@ -230,7 +230,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 2));
         for (Node node : nodeDiscovery.getNodes().values()) {
-            assertEquals(node, null);
+            assertNull(node);
         }
     }
 
@@ -251,8 +251,8 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
         assertTrue(trigger.updatedWithin(10, TimeUnit.SECONDS));
 
-        assertEquals(Iterables.size(_nodeDiscovery.getNodes().values()), 1);
-        assertEquals(counter.getNumUpdates(), 1);
+        assertEquals(1, _nodeDiscovery.getNodes().size());
+        assertEquals(1, counter.getNumUpdates());
     }
 
     @Test
@@ -317,7 +317,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         );
         nodeDiscovery.start();
 
-        assertEquals(Iterables.size(nodeDiscovery.getNodes().values()), 1);
+        assertEquals(1, nodeDiscovery.getNodes().size());
 
         CountingListener eventCounter = new CountingListener();
         nodeDiscovery.addListener(eventCounter);
@@ -356,7 +356,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testRegisterServiceCallsListener() throws Exception {
+    public void testRegisterNodeCallsListener() throws Exception {
         NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
@@ -365,7 +365,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testUnregisterServiceCallsListener() throws Exception {
+    public void testUnregisterNodeCallsListener() throws Exception {
         NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
@@ -409,7 +409,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testListenerCalledWhenServiceIsReregisteredAfterSessionKilled() throws Exception {
+    public void testListenerCalledWhenNodeIsReregisteredAfterSessionKilled() throws Exception {
         NodeTrigger initialTrigger = new NodeTrigger();
         _nodeDiscovery.addListener(initialTrigger);
 
