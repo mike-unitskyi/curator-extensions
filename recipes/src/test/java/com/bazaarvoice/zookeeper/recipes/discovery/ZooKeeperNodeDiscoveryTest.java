@@ -17,9 +17,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
@@ -112,22 +112,22 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         super.teardown();
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullConnection() {
         new ZooKeeperNodeDiscovery<Node>((ZooKeeperConnection) null, makeBasePath(FOO_BUCKET), Node.PARSER);
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullPath() throws Exception {
         new ZooKeeperNodeDiscovery<Node>(newCurator(), null, Node.PARSER);
     }
 
-    @Test (expected = IllegalArgumentException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testEmptyPath() throws Exception {
         new ZooKeeperNodeDiscovery<Node>(newCurator(), "", Node.PARSER);
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullParser() throws Exception {
         new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), null);
     }

@@ -6,11 +6,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.recipes.cache.ChildData;
@@ -25,27 +23,34 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * The {@code ZooKeeperNodeDiscovery} class is used to watch a path in ZooKeeper. It will monitor which nodes
- * exist and fire node change events to subscribed instances of {@code NodeListener}. Users of
- * this class should not cache the results of discovery as subclasses can choose to change the set of available hosts
- * based on some external mechanism (ex. using bouncer).
+ * exist and fire node change events to subscribed instances of {@code NodeListener}. Users of this class should not
+ * cache the results of discovery as subclasses can choose to change the set of available nodes based on some external
+ * mechanism (ex. using bouncer).
  *
  * @param <T> The type that will be used to represent an active node.
  */
 public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperNodeDiscovery.class);
 
+    /** How long in milliseconds to wait between attempts to start. */
+    private static final long WAIT_DURATION_IN_MILLIS = 100;
+
     private final CuratorFramework _curator;
     private final Map<String, Optional<T>> _nodes;
     private final Set<NodeListener<T>> _listeners;
     private final PathChildrenCache _pathCache;
     private final NodeDataParser<T> _nodeDataParser;
+    private final ScheduledExecutorService _executor;
 
     /**
      * Creates an instance of {@code ZooKeeperNodeDiscovery}.
@@ -74,30 +79,52 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         _curator = curator;
         _nodes = Maps.newConcurrentMap();
         _listeners = Sets.newSetFromMap(Maps.<NodeListener<T>, Boolean>newConcurrentMap());
-        _nodeDataParser = parser;
         _pathCache = new PathChildrenCache(_curator, nodePath, true, threadFactory);
+        _nodeDataParser = parser;
+        _executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
     }
 
     /**
-     * Start the NodeDiscovery. The NodeDiscovery is not started automatically. You must call this method.
+     * Start the NodeDiscovery.
      */
     public void start() {
-        try {
-            _pathCache.getListenable().addListener(new PathListener());
+        _pathCache.getListenable().addListener(new PathListener());
+        startPathCache();
+    }
 
-            // This must be synchronized so async remove events aren't processed between start() and adding nodes.
-            // Use synchronous start(true) instead of asynchronous start(false) so we can tell when it's done and the
-            // HostDiscovery set is usable.
-            synchronized (this) {
-                _pathCache.start(true);
-                for (ChildData childData : _pathCache.getCurrentData()) {
-                    addNode(childData.getPath(), parseChildData(childData));
-                }
-            }
+    /**
+     * Start the underlying path cache and then populate the data for any nodes that existed prior to being created and
+     * connected to ZooKeeper.
+     * <p/>
+     * This must be synchronized so async remove events aren't processed between start() and adding nodes.
+     * Use synchronous start(true) instead of asynchronous start(false) so we can tell when it's done and the
+     * node discovery set is usable.
+     * <p/>
+     * If there is a problem starting the path cache then we'll continue attempting to start it in a background thread.
+     */
+    private synchronized void startPathCache() {
+        try {
+            _pathCache.start(true);
         } catch (Throwable t) {
-            Closeables.closeQuietly(this);
-            throw Throwables.propagate(t);
+            waitThenStartPathCache();
+            return;
         }
+
+        for (ChildData childData : _pathCache.getCurrentData()) {
+            addNode(childData.getPath(), parseChildData(childData));
+        }
+    }
+
+    /**
+     * Wait a short period of time then try to start the path cache.
+     */
+    private void waitThenStartPathCache() {
+        _executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                startPathCache();
+            }
+        }, WAIT_DURATION_IN_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     /**
