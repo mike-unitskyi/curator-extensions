@@ -51,6 +51,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final PathChildrenCache _pathCache;
     private final NodeDataParser<T> _nodeDataParser;
     private final ScheduledExecutorService _executor;
+    private boolean _closed;
 
     /**
      * Creates an instance of {@code ZooKeeperNodeDiscovery}.
@@ -82,6 +83,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         _pathCache = new PathChildrenCache(_curator, nodePath, true, threadFactory);
         _nodeDataParser = parser;
         _executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
+        _closed = false;
     }
 
     /**
@@ -89,42 +91,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      */
     public void start() {
         _pathCache.getListenable().addListener(new PathListener());
-        startPathCache();
-    }
-
-    /**
-     * Start the underlying path cache and then populate the data for any nodes that existed prior to being created and
-     * connected to ZooKeeper.
-     * <p/>
-     * This must be synchronized so async remove events aren't processed between start() and adding nodes.
-     * Use synchronous start(true) instead of asynchronous start(false) so we can tell when it's done and the
-     * node discovery set is usable.
-     * <p/>
-     * If there is a problem starting the path cache then we'll continue attempting to start it in a background thread.
-     */
-    private synchronized void startPathCache() {
-        try {
-            _pathCache.start(true);
-        } catch (Throwable t) {
-            waitThenStartPathCache();
-            return;
-        }
-
-        for (ChildData childData : _pathCache.getCurrentData()) {
-            addNode(childData.getPath(), parseChildData(childData));
-        }
-    }
-
-    /**
-     * Wait a short period of time then try to start the path cache.
-     */
-    private void waitThenStartPathCache() {
-        _executor.schedule(new Runnable() {
-            @Override
-            public void run() {
-                startPathCache();
-            }
-        }, WAIT_DURATION_IN_MILLIS, TimeUnit.MILLISECONDS);
+        startThenLoadData();
     }
 
     /**
@@ -171,6 +138,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
 
     @Override
     public synchronized void close() throws IOException {
+        _closed = true;
         _listeners.clear();
         _pathCache.close();
         _nodes.clear();
@@ -179,6 +147,53 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     @VisibleForTesting
     CuratorFramework getCurator() {
         return _curator;
+    }
+
+    /**
+     * Start the underlying path cache and then populate the data for any nodes that existed prior to being created and
+     * connected to ZooKeeper.
+     * <p/>
+     * This must be synchronized so async remove events aren't processed between start() and adding nodes.
+     * Use synchronous start(true) instead of asynchronous start(false) so we can tell when it's done and the
+     * node discovery set is usable.
+     * <p/>
+     * If there is a problem starting the path cache then we'll continue attempting to start it in a background thread
+     * until the node discovery is closed.
+     */
+    private synchronized void startThenLoadData() {
+        if (_closed) {
+            return;
+        }
+
+        try {
+            _pathCache.start(true);
+        } catch (Throwable t) {
+            waitThenStartAgain();
+            return;
+        }
+
+        loadExistingData();
+    }
+
+    /**
+     * Wait a short period of time then try to start the path cache again.
+     */
+    private void waitThenStartAgain() {
+        _executor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                startThenLoadData();
+            }
+        }, WAIT_DURATION_IN_MILLIS, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Loads all of the existing data from the underlying path cache.
+     */
+    private synchronized void loadExistingData() {
+        for (ChildData childData : _pathCache.getCurrentData()) {
+            addNode(childData.getPath(), parseChildData(childData));
+        }
     }
 
     private synchronized void addNode(String path, T node) {
@@ -262,8 +277,14 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final class PathListener implements PathChildrenCacheListener {
         @Override
         public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-            if (event.getType() == PathChildrenCacheEvent.Type.RESET) {
+            if (event.getType() == PathChildrenCacheEvent.Type.CONNECTION_LOST ||
+                    event.getType() == PathChildrenCacheEvent.Type.CONNECTION_SUSPENDED) {
                 clearNodes();
+                return;
+            }
+
+            if (event.getType() == PathChildrenCacheEvent.Type.CONNECTION_RECONNECTED) {
+                loadExistingData();
                 return;
             }
 
