@@ -55,11 +55,10 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      * @param parser     The strategy to convert from ZooKeeper {@code byte[]} to {@code T}.
      */
     public ZooKeeperNodeDiscovery(ZooKeeperConnection connection, String nodePath, NodeDataParser<T> parser) {
-        this(((CuratorConnection) checkNotNull(connection)).getCurator(), nodePath, parser);
-    }
+        checkNotNull(connection);
+        checkArgument(connection instanceof CuratorConnection);
 
-    @VisibleForTesting
-    ZooKeeperNodeDiscovery(CuratorFramework curator, String nodePath, NodeDataParser<T> parser) {
+        CuratorFramework curator = ((CuratorConnection) connection).getCurator();
         checkNotNull(curator);
         checkNotNull(nodePath);
         checkNotNull(parser);
