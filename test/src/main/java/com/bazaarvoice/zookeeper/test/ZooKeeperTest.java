@@ -8,7 +8,10 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
+import com.netflix.curator.framework.state.ConnectionState;
+import com.netflix.curator.framework.state.ConnectionStateListener;
 import com.netflix.curator.retry.RetryNTimes;
+import com.netflix.curator.test.InstanceSpec;
 import com.netflix.curator.test.KillSession;
 import com.netflix.curator.test.TestingServer;
 import org.apache.zookeeper.WatchedEvent;
@@ -16,16 +19,17 @@ import org.apache.zookeeper.Watcher;
 import org.junit.After;
 import org.junit.Before;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public abstract class ZooKeeperTest {
-    protected TestingServer _zooKeeperServer;
+    private TestingServer _zooKeeperServer;
+    private final InstanceSpec _instanceSpec = InstanceSpec.newInstanceSpec();
 
     /** All of the curator instances that we've created running the test. */
     private List<CuratorFramework> _curatorInstances = Lists.newArrayList();
@@ -35,7 +39,7 @@ public abstract class ZooKeeperTest {
 
     @Before
     public void setup() throws Exception {
-        _zooKeeperServer = new TestingServer();
+        startZooKeeper();
     }
 
     @After
@@ -50,6 +54,22 @@ public abstract class ZooKeeperTest {
         Closeables.closeQuietly(_zooKeeperServer);
     }
 
+    public void startZooKeeper() throws Exception {
+        _zooKeeperServer = new TestingServer(_instanceSpec);
+    }
+
+    public void stopZooKeeper() throws IOException {
+        if (_zooKeeperServer != null) {
+            _zooKeeperServer.stop();
+        }
+        _zooKeeperServer = null;
+    }
+
+    public void restartZooKeeper() throws Exception {
+        stopZooKeeper();
+        startZooKeeper();
+    }
+
     public ZooKeeperConnection newZooKeeperConnection() throws Exception {
         // For test case purposes don't retry at all.  This should never be done in production!!!
         return newZooKeeperConnection(new ZooKeeperConfiguration()
@@ -57,10 +77,8 @@ public abstract class ZooKeeperTest {
     }
 
     public ZooKeeperConnection newZooKeeperConnection(ZooKeeperConfiguration configuration) {
-        assertNotNull("ZooKeeper testing server is null, did you forget to call super.setup()", _zooKeeperServer);
-
         ZooKeeperConnection connection = configuration
-                .withConnectString(_zooKeeperServer.getConnectString())
+                .withConnectString(_instanceSpec.getConnectString())
                 .connect();
 
         _connections.add(connection);
@@ -73,10 +91,8 @@ public abstract class ZooKeeperTest {
     }
 
     public CuratorFramework newCurator(CuratorFrameworkFactory.Builder builder) throws Exception {
-        assertNotNull("ZooKeeper testing server is null, did you forget to call super.setup()", _zooKeeperServer);
-
         CuratorFramework curator = builder
-                .connectString(_zooKeeperServer.getConnectString())
+                .connectString(_instanceSpec.getConnectString())
                 .build();
         curator.start();
 
@@ -103,7 +119,8 @@ public abstract class ZooKeeperTest {
     }
 
     public void killSession(CuratorFramework curator) throws Exception {
-        KillSession.kill(curator.getZookeeperClient().getZooKeeper(), _zooKeeperServer.getConnectString());
+        KillSession.kill(curator.getZookeeperClient().getZooKeeper(),
+                curator.getZookeeperClient().getCurrentConnectionString());
     }
 
     public static class Trigger {
@@ -144,6 +161,29 @@ public abstract class ZooKeeperTest {
         @Override
         public void process(WatchedEvent event) {
             if (_expected.equals(event.getType())) {
+                fire();
+            }
+        }
+    }
+
+    public static class ConnectionTrigger extends Trigger implements ConnectionStateListener {
+        private final ConnectionState _expected;
+
+        public static ConnectionTrigger lostTrigger() {
+            return new ConnectionTrigger(ConnectionState.LOST);
+        }
+
+        public static ConnectionTrigger reconnectedTrigger() {
+            return new ConnectionTrigger(ConnectionState.RECONNECTED);
+        }
+
+        public ConnectionTrigger(ConnectionState expected) {
+            _expected = expected;
+        }
+
+        @Override
+        public void stateChanged(CuratorFramework curatorFramework, ConnectionState connectionState) {
+            if (_expected.equals(connectionState)) {
                 fire();
             }
         }

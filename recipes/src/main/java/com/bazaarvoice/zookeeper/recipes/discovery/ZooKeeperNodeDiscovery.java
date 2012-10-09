@@ -143,11 +143,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         _nodes.clear();
     }
 
-    @VisibleForTesting
-    CuratorFramework getCurator() {
-        return _curator;
-    }
-
     /**
      * Start the underlying path cache and then populate the data for any nodes that existed prior to being created and
      * connected to ZooKeeper.
@@ -238,12 +233,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         }
     }
 
-    private void fireZooKeeperEvent(NodeListener.ZooKeeperEvent event) {
-        for (NodeListener<T> listener : _listeners) {
-            listener.onZooKeeperEvent(event);
-        }
-    }
-
     private T parseChildData(ChildData childData) {
         T value = null;
         try {
@@ -282,16 +271,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
                     updateNode(nodePath, nodeData);
                     break;
 
-                case CONNECTION_SUSPENDED:
-                    fireZooKeeperEvent(NodeListener.ZooKeeperEvent.SUSPENDED);
-                    break;
-
-                case CONNECTION_LOST:
-                    fireZooKeeperEvent(NodeListener.ZooKeeperEvent.LOST);
-                    break;
-
-                case CONNECTION_RECONNECTED:
-                    fireZooKeeperEvent(NodeListener.ZooKeeperEvent.RECONNECTED);
+                default:
                     break;
             }
         }

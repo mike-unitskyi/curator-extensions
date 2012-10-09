@@ -1,6 +1,5 @@
 package com.bazaarvoice.zookeeper.recipes.discovery;
 
-import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.google.common.base.Charsets;
@@ -352,20 +351,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testZooKeeperResetFires() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
-        _nodeDiscovery.addListener(trigger);
-
-        killSession(_nodeDiscovery.getCurator());
-
-        assertTrue(trigger.suspendedWithin(10, TimeUnit.SECONDS));
-    }
-
-    @Test
     public void testInitializeRacesRemove() throws Exception {
-        // Create a new ZK connection now so it's ready-to-go when we need it.
-        ZooKeeperConnection zooKeeperConnection = newZooKeeperConnection();
-
         // Register FOO and wait until it's visible.
         register(FOO_BUCKET, FOO);
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
@@ -373,7 +359,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         // Unregister FOO and create a new NodeDiscovery instance as close together as we can, so they race.
         unregister(FOO);
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                zooKeeperConnection,
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );

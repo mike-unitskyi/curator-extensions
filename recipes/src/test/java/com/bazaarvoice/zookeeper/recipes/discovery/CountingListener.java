@@ -20,10 +20,6 @@ public final class CountingListener implements NodeListener<Node> {
         _numUpdates++;
     }
 
-    @Override
-    public void onZooKeeperEvent(ZooKeeperEvent event) {
-    }
-
     public int getNumAdds() {
         return _numAdds;
     }

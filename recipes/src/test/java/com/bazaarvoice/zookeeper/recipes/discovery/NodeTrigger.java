@@ -14,9 +14,6 @@ public final class NodeTrigger implements NodeListener<Node> {
     private final ZooKeeperTest.Trigger _addTrigger = new ZooKeeperTest.Trigger();
     private final ZooKeeperTest.Trigger _removeTrigger = new ZooKeeperTest.Trigger();
     private final ZooKeeperTest.Trigger _updateTrigger = new ZooKeeperTest.Trigger();
-    private final ZooKeeperTest.Trigger _suspendedTrigger = new ZooKeeperTest.Trigger();
-    private final ZooKeeperTest.Trigger _lostTrigger = new ZooKeeperTest.Trigger();
-    private final ZooKeeperTest.Trigger _reconnectedTrigger = new ZooKeeperTest.Trigger();
 
     public NodeTrigger() {
         this(Optional.<Node>absent());
@@ -53,21 +50,6 @@ public final class NodeTrigger implements NodeListener<Node> {
         }
     }
 
-    @Override
-    public void onZooKeeperEvent(ZooKeeperEvent event) {
-        switch (event) {
-            case SUSPENDED:
-                _suspendedTrigger.fire();
-                break;
-            case LOST:
-                _lostTrigger.fire();
-                break;
-            case RECONNECTED:
-                _reconnectedTrigger.fire();
-                break;
-        }
-    }
-
     public boolean addedWithin(long duration, TimeUnit unit) throws InterruptedException {
         return _addTrigger.firedWithin(duration, unit);
     }
@@ -78,17 +60,5 @@ public final class NodeTrigger implements NodeListener<Node> {
 
     public boolean updatedWithin(long duration, TimeUnit unit) throws InterruptedException {
         return _updateTrigger.firedWithin(duration, unit);
-    }
-
-    public boolean suspendedWithin(long duration, TimeUnit unit) throws InterruptedException {
-        return _suspendedTrigger.firedWithin(duration, unit);
-    }
-
-    public boolean lostWithin(long duration, TimeUnit unit) throws InterruptedException {
-        return _lostTrigger.firedWithin(duration, unit);
-    }
-
-    public boolean reconnectedWithin(long duration, TimeUnit unit) throws InterruptedException {
-        return _reconnectedTrigger.firedWithin(duration, unit);
     }
 }
