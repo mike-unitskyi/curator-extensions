@@ -24,14 +24,14 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public abstract class ZooKeeperTest {
     private TestingServer _zooKeeperServer;
+    private boolean _started;
     private InstanceSpec _instanceSpec;
-    private boolean _setupCalled;
 
     /** All of the curator instances that we've created running the test. */
     private List<CuratorFramework> _curatorInstances = Lists.newArrayList();
@@ -41,7 +41,6 @@ public abstract class ZooKeeperTest {
 
     @Before
     public void setup() throws Exception {
-        _setupCalled = true;
         _instanceSpec = InstanceSpec.newInstanceSpec();
         startZooKeeper();
     }
@@ -59,16 +58,17 @@ public abstract class ZooKeeperTest {
     }
 
     public void startZooKeeper() throws Exception {
-        if (_zooKeeperServer == null) {
+        if (!_started) {
             _zooKeeperServer = new TestingServer(_instanceSpec);
+            _started = true;
         }
     }
 
     public void stopZooKeeper() throws IOException {
-        if (_zooKeeperServer != null) {
+        if (_started) {
             _zooKeeperServer.stop();
+            _started = false;
         }
-        _zooKeeperServer = null;
     }
 
     public void restartZooKeeper() throws Exception {
@@ -83,7 +83,7 @@ public abstract class ZooKeeperTest {
     }
 
     public ZooKeeperConnection newZooKeeperConnection(ZooKeeperConfiguration configuration) {
-        assertTrue("setup() method has not been called. Subclasses should call super.setup()", _setupCalled);
+        assertNotNull("ZooKeeper testing server is null, did you forget to call super.setup()", _zooKeeperServer);
 
         ZooKeeperConnection connection = configuration
                 .withConnectString(_instanceSpec.getConnectString())
@@ -99,7 +99,7 @@ public abstract class ZooKeeperTest {
     }
 
     public CuratorFramework newCurator(CuratorFrameworkFactory.Builder builder) throws Exception {
-        assertTrue("setup() method has not been called. Subclasses should call super.setup()", _setupCalled);
+        assertNotNull("ZooKeeper testing server is null, did you forget to call super.setup()", _zooKeeperServer);
 
         CuratorFramework curator = builder
                 .connectString(_instanceSpec.getConnectString())
