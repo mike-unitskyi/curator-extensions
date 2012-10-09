@@ -1,60 +1,26 @@
 package com.bazaarvoice.zookeeper.recipes.discovery;
 
-import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
-    private static class Node {
-        private final String _name;
-
-        public Node(String name) {
-            _name = name;
-        }
-
-        public String getName() {
-            return _name;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(_name);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (!(obj instanceof Node)) return false;
-
-            Node that = (Node) obj;
-            return Objects.equal(_name, that.getName());
-        }
-
-        public static final NodeDataParser<Node> PARSER = new NodeDataParser<Node>() {
-            @Override
-            public Node parse(String path, byte[] data) {
-                return new Node(new String(data, Charsets.UTF_8));
-            }
-        };
-    }
 
     private final Map<String, ZooKeeperPersistentEphemeralNode> _nodes = Maps.newConcurrentMap();
 
@@ -93,13 +59,17 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     private ZooKeeperNodeDiscovery<Node> _nodeDiscovery;
 
+    @Before
     @Override
     public void setup() throws Exception {
         super.setup();
-        _nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), Node.PARSER);
+
+        _nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(), makeBasePath(FOO_BUCKET),
+                Node.PARSER);
         _nodeDiscovery.start();
     }
 
+    @After
     @Override
     public void teardown() throws Exception {
         Closeables.closeQuietly(_nodeDiscovery);
@@ -112,24 +82,24 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         super.teardown();
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullConnection() {
-        new ZooKeeperNodeDiscovery<Node>((ZooKeeperConnection) null, makeBasePath(FOO_BUCKET), Node.PARSER);
+        new ZooKeeperNodeDiscovery<Node>(null, makeBasePath(FOO_BUCKET), Node.PARSER);
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullPath() throws Exception {
-        new ZooKeeperNodeDiscovery<Node>(newCurator(), null, Node.PARSER);
+        new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(), null, Node.PARSER);
     }
 
-    @Test (expected = IllegalArgumentException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testEmptyPath() throws Exception {
-        new ZooKeeperNodeDiscovery<Node>(newCurator(), "", Node.PARSER);
+        new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(), "", Node.PARSER);
     }
 
-    @Test (expected = NullPointerException.class)
+    @Test(expected = NullPointerException.class)
     public void testNullParser() throws Exception {
-        new ZooKeeperNodeDiscovery<Node>(newCurator(), makeBasePath(FOO_BUCKET), null);
+        new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(), makeBasePath(FOO_BUCKET), null);
     }
 
     @Test
@@ -162,7 +132,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         // Create the NodeDiscovery after registration is done so there's at least one initial node
         register(FOO_BUCKET, FOO);
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                newCurator(),
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
@@ -218,7 +188,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         register(FOO_BUCKET, BAR);
 
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                newCurator(),
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 new NodeDataParser<Node>() {
                     @Override
@@ -267,7 +237,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     @Test
     public void testParserReturnsNull() throws Exception {
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                newCurator(),
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 new NodeDataParser<Node>() {
                     @Override
@@ -288,7 +258,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     @Test
     public void testParserReturnsNullOnException() throws Exception {
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                newCurator(),
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 new NodeDataParser<Node>() {
                     @Override
@@ -311,7 +281,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         register(FOO_BUCKET, FOO);
 
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                newCurator(),
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
@@ -328,31 +298,6 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         assertTrue(waitUntilSize(nodeDiscovery.getNodes(), 0));
 
         assertEquals(0, eventCounter.getNumAdds());  // nodes initially visible never fire add events
-    }
-
-    @Test
-    public void testServiceRemovedWhenSessionKilled() throws Exception {
-        register(FOO_BUCKET, FOO);
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 0));
-    }
-
-    @Test
-    public void testServiceReRegisteredWhenSessionKilled() throws Exception {
-        register(FOO_BUCKET, FOO);
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 0));
-
-        // Then it automatically gets created when the connection is re-established with ZooKeeper
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
     }
 
     @Test
@@ -395,40 +340,6 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testListenerCalledWhenSessionKilled() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
-        _nodeDiscovery.addListener(trigger);
-
-        register(FOO_BUCKET, FOO);
-        assertTrue(trigger.addedWithin(10, TimeUnit.SECONDS));
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(trigger.removedWithin(10, TimeUnit.SECONDS));
-    }
-
-    @Test
-    public void testListenerCalledWhenNodeIsReregisteredAfterSessionKilled() throws Exception {
-        NodeTrigger initialTrigger = new NodeTrigger();
-        _nodeDiscovery.addListener(initialTrigger);
-
-        register(FOO_BUCKET, FOO);
-        assertTrue(initialTrigger.addedWithin(10, TimeUnit.SECONDS));
-
-        NodeTrigger trigger = new NodeTrigger();
-        _nodeDiscovery.addListener(trigger);
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(trigger.removedWithin(10, TimeUnit.SECONDS));
-
-        // Then it automatically gets created when the connection is re-established with ZooKeeper
-        assertTrue(trigger.addedWithin(10, TimeUnit.SECONDS));
-    }
-
-    @Test
     public void testMultipleListeners() throws Exception {
         NodeTrigger trigger1 = new NodeTrigger();
         NodeTrigger trigger2 = new NodeTrigger();
@@ -445,20 +356,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testZooKeeperResetFires() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
-        _nodeDiscovery.addListener(trigger);
-
-        killSession(_nodeDiscovery.getCurator());
-
-        assertTrue(trigger.resetWithin(10, TimeUnit.SECONDS));
-    }
-
-    @Test
     public void testInitializeRacesRemove() throws Exception {
-        // Create a new ZK connection now so it's ready-to-go when we need it.
-        CuratorFramework curator = newCurator();
-
         // Register FOO and wait until it's visible.
         register(FOO_BUCKET, FOO);
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
@@ -466,7 +364,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         // Unregister FOO and create a new NodeDiscovery instance as close together as we can, so they race.
         unregister(FOO);
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(
-                curator,
+                newZooKeeperConnection(),
                 makeBasePath(FOO_BUCKET),
                 Node.PARSER
         );
@@ -492,115 +390,4 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         return waitUntilSize(map, size, 10, TimeUnit.SECONDS);
     }
 
-    private static final class NodeTrigger implements NodeListener<Node> {
-        private final Optional<Node> _expected;
-
-        private final Trigger _addTrigger = new Trigger();
-        private final Trigger _removeTrigger = new Trigger();
-        private final Trigger _updateTrigger = new Trigger();
-        private final Trigger _resetTrigger = new Trigger();
-
-        public NodeTrigger() {
-            this(Optional.<Node>absent());
-        }
-
-        public NodeTrigger(Node expected) {
-            this(Optional.fromNullable(expected));
-        }
-
-        public NodeTrigger(Optional<Node> expected) {
-            checkNotNull(expected);
-
-            _expected = expected;
-        }
-
-        @Override
-        public void onNodeAdded(String path, Node node) {
-            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
-                _addTrigger.fire();
-            }
-        }
-
-        @Override
-        public void onNodeRemoved(String path, Node node) {
-            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
-                _removeTrigger.fire();
-            }
-        }
-
-        @Override
-        public void onNodeUpdated(String path, Node node) {
-            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
-                _updateTrigger.fire();
-            }
-        }
-
-        @Override
-        public void onZooKeeperReset() {
-            _resetTrigger.fire();
-        }
-
-        public boolean addedWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _addTrigger.firedWithin(duration, unit);
-        }
-
-        public boolean removedWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _removeTrigger.firedWithin(duration, unit);
-        }
-
-        public boolean updatedWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _updateTrigger.firedWithin(duration, unit);
-        }
-
-        public boolean resetWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _resetTrigger.firedWithin(duration, unit);
-        }
-    }
-
-    private static final class CountingListener implements NodeListener<Node> {
-        private int _numAdds;
-        private int _numRemoves;
-        private int _numUpdates;
-        private int _numResets;
-
-        @Override
-        public void onNodeAdded(String path, Node node) {
-            _numAdds++;
-        }
-
-        @Override
-        public void onNodeRemoved(String path, Node node) {
-            _numRemoves++;
-        }
-
-        @Override
-        public void onNodeUpdated(String path, Node node) {
-            _numUpdates++;
-        }
-
-        @Override
-        public void onZooKeeperReset() {
-            _numResets++;
-        }
-
-        public int getNumAdds() {
-            return _numAdds;
-        }
-
-        public int getNumRemoves() {
-            return _numRemoves;
-        }
-
-        public int getNumResets() {
-            return _numResets;
-        }
-
-        public int getNumUpdates() {
-            return _numUpdates;
-        }
-
-        public int getNumEvents() {
-            return _numAdds + _numRemoves + _numUpdates + _numResets;
-        }
-    }
 }
