@@ -6,7 +6,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -45,7 +44,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     /** How long in milliseconds to wait between attempts to start. */
     private static final long WAIT_DURATION_IN_MILLIS = 100;
 
-    private final CuratorFramework _curator;
     private final Map<String, Optional<T>> _nodes;
     private final Set<NodeListener<T>> _listeners;
     private final PathChildrenCache _pathCache;
@@ -61,11 +59,10 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
      * @param parser     The strategy to convert from ZooKeeper {@code byte[]} to {@code T}.
      */
     public ZooKeeperNodeDiscovery(ZooKeeperConnection connection, String nodePath, NodeDataParser<T> parser) {
-        this(((CuratorConnection) checkNotNull(connection)).getCurator(), nodePath, parser);
-    }
+        checkNotNull(connection);
+        checkArgument(connection instanceof CuratorConnection);
 
-    @VisibleForTesting
-    ZooKeeperNodeDiscovery(CuratorFramework curator, String nodePath, NodeDataParser<T> parser) {
+        CuratorFramework curator = ((CuratorConnection) connection).getCurator();
         checkNotNull(curator);
         checkNotNull(nodePath);
         checkNotNull(parser);
@@ -77,10 +74,9 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
                 .setDaemon(true)
                 .build();
 
-        _curator = curator;
         _nodes = Maps.newConcurrentMap();
         _listeners = Sets.newSetFromMap(Maps.<NodeListener<T>, Boolean>newConcurrentMap());
-        _pathCache = new PathChildrenCache(_curator, nodePath, true, threadFactory);
+        _pathCache = new PathChildrenCache(curator, nodePath, true, threadFactory);
         _nodeDataParser = parser;
         _executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
         _closed = false;
@@ -139,14 +135,10 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     @Override
     public synchronized void close() throws IOException {
         _closed = true;
+        _executor.shutdown();
         _listeners.clear();
         _pathCache.close();
         _nodes.clear();
-    }
-
-    @VisibleForTesting
-    CuratorFramework getCurator() {
-        return _curator;
     }
 
     /**
@@ -221,19 +213,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         }
     }
 
-    private synchronized void clearNodes() {
-        // synchronize the modification of _nodes and firing of events so listeners always receive events in the
-        // order they occur.
-        Map<String, Optional<T>> nodes = ImmutableMap.copyOf(_nodes);
-        _nodes.clear();
-
-        fireResetEvent();
-
-        for (String path : nodes.keySet()) {
-            fireRemoveEvent(path, nodes.get(path).orNull());
-        }
-    }
-
     private void fireAddEvent(String path, T node) {
         for (NodeListener<T> listener : _listeners) {
             listener.onNodeAdded(path, node);
@@ -249,12 +228,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private void fireUpdateEvent(String path, T node) {
         for (NodeListener<T> listener : _listeners) {
             listener.onNodeUpdated(path, node);
-        }
-    }
-
-    private void fireResetEvent() {
-        for (NodeListener<T> listener : _listeners) {
-            listener.onZooKeeperReset();
         }
     }
 
@@ -277,19 +250,12 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final class PathListener implements PathChildrenCacheListener {
         @Override
         public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-            if (event.getType() == PathChildrenCacheEvent.Type.CONNECTION_LOST ||
-                    event.getType() == PathChildrenCacheEvent.Type.CONNECTION_SUSPENDED) {
-                clearNodes();
-                return;
+            String nodePath = null;
+            T nodeData = null;
+            if (event.getData() != null) {
+                nodePath = event.getData().getPath();
+                nodeData = parseChildData(event.getData());
             }
-
-            if (event.getType() == PathChildrenCacheEvent.Type.CONNECTION_RECONNECTED) {
-                loadExistingData();
-                return;
-            }
-
-            String nodePath = event.getData().getPath();
-            T nodeData = parseChildData(event.getData());
             switch (event.getType()) {
                 case CHILD_ADDED:
                     addNode(nodePath, nodeData);
