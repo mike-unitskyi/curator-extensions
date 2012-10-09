@@ -57,15 +57,12 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     private ZooKeeperNodeDiscovery<Node> _nodeDiscovery;
 
-    @Override
     public void setup() throws Exception {
-        super.setup();
         _nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(), makeBasePath(FOO_BUCKET),
                 Node.PARSER);
         _nodeDiscovery.start();
     }
 
-    @Override
     public void teardown() throws Exception {
         Closeables.closeQuietly(_nodeDiscovery);
 
@@ -73,8 +70,6 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
             node.close(10, TimeUnit.SECONDS);
         }
         _nodes.clear();
-
-        super.teardown();
     }
 
     @Test(expected = NullPointerException.class)

@@ -33,8 +33,6 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
         for (ZooKeeperPersistentEphemeralNode node : _createdNodes) {
             node.close(10, TimeUnit.SECONDS);
         }
-
-        super.teardown();
     }
 
     @Test(expected = NullPointerException.class)

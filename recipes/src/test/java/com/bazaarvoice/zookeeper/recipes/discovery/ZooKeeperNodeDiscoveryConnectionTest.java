@@ -12,12 +12,10 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertTrue;
 
 public class ZooKeeperNodeDiscoveryConnectionTest extends ZooKeeperTest {
-    public void setup() {
-        // Purposefully don't call super.
-    }
-
     @Test
     public void testWithoutZooKeeper() throws Exception {
+        stopZooKeeper();
+
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(),
                 "/foo", Node.PARSER);
 
@@ -28,8 +26,6 @@ public class ZooKeeperNodeDiscoveryConnectionTest extends ZooKeeperTest {
 
     @Test
     public void testZooKeeperRestart() throws Exception {
-        startZooKeeper();
-
         ZooKeeperConnection connection = newZooKeeperConnection();
         ZooKeeperNodeDiscovery<Node> nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(connection, "/foo", Node.PARSER);
 
@@ -40,7 +36,7 @@ public class ZooKeeperNodeDiscoveryConnectionTest extends ZooKeeperTest {
 
         nodeDiscovery.start();
 
-        stopZooKeeper();
+        restartZooKeeper();
 
         assertTrue(lostTrigger.firedWithin(10, TimeUnit.SECONDS));
 

@@ -44,7 +44,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     /** How long in milliseconds to wait between attempts to start. */
     private static final long WAIT_DURATION_IN_MILLIS = 100;
 
-    private final CuratorFramework _curator;
     private final Map<String, Optional<T>> _nodes;
     private final Set<NodeListener<T>> _listeners;
     private final PathChildrenCache _pathCache;
@@ -75,10 +74,9 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
                 .setDaemon(true)
                 .build();
 
-        _curator = curator;
         _nodes = Maps.newConcurrentMap();
         _listeners = Sets.newSetFromMap(Maps.<NodeListener<T>, Boolean>newConcurrentMap());
-        _pathCache = new PathChildrenCache(_curator, nodePath, true, threadFactory);
+        _pathCache = new PathChildrenCache(curator, nodePath, true, threadFactory);
         _nodeDataParser = parser;
         _executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
         _closed = false;
@@ -269,9 +267,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
 
                 case CHILD_UPDATED:
                     updateNode(nodePath, nodeData);
-                    break;
-
-                default:
                     break;
             }
         }

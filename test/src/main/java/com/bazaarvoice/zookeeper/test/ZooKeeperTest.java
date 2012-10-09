@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 
 public abstract class ZooKeeperTest {
     private TestingServer _zooKeeperServer;
-    private final InstanceSpec _instanceSpec = InstanceSpec.newInstanceSpec();
+    private InstanceSpec _instanceSpec;
 
     /** All of the curator instances that we've created running the test. */
     private List<CuratorFramework> _curatorInstances = Lists.newArrayList();
@@ -38,12 +38,13 @@ public abstract class ZooKeeperTest {
     private List<ZooKeeperConnection> _connections = Lists.newArrayList();
 
     @Before
-    public void setup() throws Exception {
+    public final void setupZooKeeperTest() throws Exception {
+        _instanceSpec = InstanceSpec.newInstanceSpec();
         startZooKeeper();
     }
 
     @After
-    public void teardown() throws Exception {
+    public final void tearDownZooKeeperTest() throws Exception {
         for (ZooKeeperConnection connection : _connections) {
             Closeables.closeQuietly(connection);
         }
@@ -55,7 +56,9 @@ public abstract class ZooKeeperTest {
     }
 
     public void startZooKeeper() throws Exception {
-        _zooKeeperServer = new TestingServer(_instanceSpec);
+        if (_zooKeeperServer == null) {
+            _zooKeeperServer = new TestingServer(_instanceSpec);
+        }
     }
 
     public void stopZooKeeper() throws IOException {
