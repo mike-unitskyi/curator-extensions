@@ -154,7 +154,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.create().creatingParentsIfNeeded().forPath(nodePath, FOO.getName().getBytes(Charsets.UTF_8));
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
@@ -169,7 +169,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.create().creatingParentsIfNeeded().forPath(nodePath, FOO.getName().getBytes(Charsets.UTF_8));
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
@@ -208,10 +208,10 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.create().creatingParentsIfNeeded().forPath(nodePath, FOO.getName().getBytes(Charsets.UTF_8));
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
-        Node.CountingListener counter = new Node.CountingListener();
+        CountingListener counter = new CountingListener();
         _nodeDiscovery.addListener(counter);
 
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
@@ -223,7 +223,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testParserReturnsValue() throws Exception {
-        Node.NodeTrigger trigger = new Node.NodeTrigger(FOO);
+        NodeTrigger trigger = new NodeTrigger(FOO);
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -244,7 +244,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         );
         nodeDiscovery.start();
 
-        Node.NodeTrigger trigger = new Node.NodeTrigger((Node) null);
+        NodeTrigger trigger = new NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -265,7 +265,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         );
         nodeDiscovery.start();
 
-        Node.NodeTrigger trigger = new Node.NodeTrigger((Node) null);
+        NodeTrigger trigger = new NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -285,7 +285,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
         assertEquals(1, nodeDiscovery.getNodes().size());
 
-        Node.CountingListener eventCounter = new Node.CountingListener();
+        CountingListener eventCounter = new CountingListener();
         nodeDiscovery.addListener(eventCounter);
 
         // Don't know when the register() will take effect.  Execute and wait for an
@@ -298,7 +298,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testRegisterNodeCallsListener() throws Exception {
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -307,7 +307,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testUnregisterNodeCallsListener() throws Exception {
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -319,10 +319,10 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testRemovedListenerDoesNotSeeEvents() throws Exception {
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
-        Node.CountingListener eventCounter = new Node.CountingListener();
+        CountingListener eventCounter = new CountingListener();
         _nodeDiscovery.addListener(eventCounter);
         _nodeDiscovery.removeListener(eventCounter);
 
@@ -337,8 +337,8 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testMultipleListeners() throws Exception {
-        Node.NodeTrigger trigger1 = new Node.NodeTrigger();
-        Node.NodeTrigger trigger2 = new Node.NodeTrigger();
+        NodeTrigger trigger1 = new NodeTrigger();
+        NodeTrigger trigger2 = new NodeTrigger();
         _nodeDiscovery.addListener(trigger1);
         _nodeDiscovery.addListener(trigger2);
 
@@ -353,7 +353,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testZooKeeperResetFires() throws Exception {
-        Node.NodeTrigger trigger = new Node.NodeTrigger();
+        NodeTrigger trigger = new NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         killSession(_nodeDiscovery.getCurator());
