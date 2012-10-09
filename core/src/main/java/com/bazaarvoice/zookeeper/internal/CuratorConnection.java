@@ -71,6 +71,11 @@ public class CuratorConnection implements ZooKeeperConnection {
         return new CuratorConnection(_curator.usingNamespace(absolute));
     }
 
+    @Override
+    public ZooKeeperConnection withNoNamespace() {
+        return new CuratorConnection(_curator.usingNamespace(null));
+    }
+
     public CuratorFramework getCurator() {
         return _curator;
     }

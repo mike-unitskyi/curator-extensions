@@ -89,6 +89,22 @@ public class ZooKeeperConnectionTest {
     }
 
     @Test
+    public void testNoNamespaceGetNoNamespace() {
+        ZooKeeperConnection connection = connect(newConfiguration());
+        ZooKeeperConnection global = connection.withNoNamespace();
+        // getNamespace says that it will return "" if in global namespace, but this is not currently true.
+        assertEquals(null, ((CuratorConnection) global).getCurator().getNamespace());
+    }
+
+    @Test
+    public void testNamespaceGetNoNamespace() {
+        ZooKeeperConnection connection = connect(newConfiguration().withNamespace("/parent"));
+        ZooKeeperConnection global = connection.withNoNamespace();
+        // getNamespace says that it will return "" if in global namespace, but this is not currently true.
+        assertEquals(null, ((CuratorConnection) global).getCurator().getNamespace());
+    }
+
+    @Test
     public void testNoNamespaceWithNamespace() {
         ZooKeeperConnection namespaced = connect(newConfiguration()).withNamespace("/child");
         assertEquals("/child", ((CuratorConnection) namespaced).getCurator().getNamespace());
