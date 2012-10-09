@@ -31,9 +31,28 @@ public interface NodeListener<T> {
     void onNodeUpdated(String path, T node);
 
     /**
-     * Notification that ZooKeeper's connection was Suspend, Lost, or Reconnected. The semantics of a reset imply that
-     * onNodeRemoved() is going to be called for each currently active node immediately following this reset event. If
-     * this was due to a Reconnected event then onNodeAdded() will be called for each node already active in ZooKeeper.
+     * Notification that a ZooKeeper connection event happened. Can be suspended, lost, or reconnected. After a
+     * reconnect, changes from the previously known state of the world will be reported. The actual sequence of events
+     * during the loss of connection is not reported, merely the total delta between connection loss and reconnection.
+     * Notable, this means that there is no guarantee that nodes that changed did so in a single transaction, nor that
+     * unchanged nodes did not change and then change back during the connection disruption.
+     *
+     * @param event The ZooKeeper connection state event.
      */
-    void onZooKeeperReset();
+    void onZooKeeperEvent(ZooKeeperEvent event);
+
+    enum ZooKeeperEvent {
+        /**
+         * Connection suspended. May be reconnected.
+         */
+        SUSPENDED,
+        /**
+         * Connection lost. Probably will not be reconnected (but not guaranteed not to be).
+         */
+        LOST,
+        /**
+         * Reconnected. Change i
+         */
+        RECONNECTED,
+    }
 }

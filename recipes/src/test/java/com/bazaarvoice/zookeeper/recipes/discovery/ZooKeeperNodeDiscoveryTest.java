@@ -4,8 +4,6 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.recipes.ZooKeeperPersistentEphemeralNode;
 import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.netflix.curator.framework.CuratorFramework;
@@ -16,7 +14,6 @@ import org.junit.Test;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -83,7 +80,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test(expected = NullPointerException.class)
     public void testNullConnection() {
-        new ZooKeeperNodeDiscovery<Node>((ZooKeeperConnection) null, makeBasePath(FOO_BUCKET), Node.PARSER);
+        new ZooKeeperNodeDiscovery<Node>(null, makeBasePath(FOO_BUCKET), Node.PARSER);
     }
 
     @Test(expected = NullPointerException.class)
@@ -157,7 +154,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.create().creatingParentsIfNeeded().forPath(nodePath, FOO.getName().getBytes(Charsets.UTF_8));
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
@@ -172,7 +169,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.create().creatingParentsIfNeeded().forPath(nodePath, FOO.getName().getBytes(Charsets.UTF_8));
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
@@ -211,10 +208,10 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         curator.create().creatingParentsIfNeeded().forPath(nodePath, FOO.getName().getBytes(Charsets.UTF_8));
         assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
 
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
-        CountingListener counter = new CountingListener();
+        Node.CountingListener counter = new Node.CountingListener();
         _nodeDiscovery.addListener(counter);
 
         curator.setData().forPath(nodePath, BAR.getName().getBytes(Charsets.UTF_8));
@@ -226,7 +223,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testParserReturnsValue() throws Exception {
-        NodeTrigger trigger = new NodeTrigger(FOO);
+        Node.NodeTrigger trigger = new Node.NodeTrigger(FOO);
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -247,7 +244,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         );
         nodeDiscovery.start();
 
-        NodeTrigger trigger = new NodeTrigger((Node) null);
+        Node.NodeTrigger trigger = new Node.NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -268,7 +265,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         );
         nodeDiscovery.start();
 
-        NodeTrigger trigger = new NodeTrigger((Node) null);
+        Node.NodeTrigger trigger = new Node.NodeTrigger((Node) null);
         nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -288,7 +285,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
         assertEquals(1, nodeDiscovery.getNodes().size());
 
-        CountingListener eventCounter = new CountingListener();
+        Node.CountingListener eventCounter = new Node.CountingListener();
         nodeDiscovery.addListener(eventCounter);
 
         // Don't know when the register() will take effect.  Execute and wait for an
@@ -300,33 +297,8 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testNodeRemovedWhenSessionKilled() throws Exception {
-        register(FOO_BUCKET, FOO);
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 0));
-    }
-
-    @Test
-    public void testNodeReRegisteredWhenSessionKilled() throws Exception {
-        register(FOO_BUCKET, FOO);
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 0));
-
-        // Then it automatically gets created when the connection is re-established with ZooKeeper
-        assertTrue(waitUntilSize(_nodeDiscovery.getNodes(), 1));
-    }
-
-    @Test
     public void testRegisterNodeCallsListener() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -335,7 +307,7 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testUnregisterNodeCallsListener() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         register(FOO_BUCKET, FOO);
@@ -347,10 +319,10 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testRemovedListenerDoesNotSeeEvents() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
-        CountingListener eventCounter = new CountingListener();
+        Node.CountingListener eventCounter = new Node.CountingListener();
         _nodeDiscovery.addListener(eventCounter);
         _nodeDiscovery.removeListener(eventCounter);
 
@@ -364,43 +336,9 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
     }
 
     @Test
-    public void testListenerCalledWhenSessionKilled() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
-        _nodeDiscovery.addListener(trigger);
-
-        register(FOO_BUCKET, FOO);
-        assertTrue(trigger.addedWithin(10, TimeUnit.SECONDS));
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(trigger.removedWithin(10, TimeUnit.SECONDS));
-    }
-
-    @Test
-    public void testListenerCalledWhenNodeIsReregisteredAfterSessionKilled() throws Exception {
-        NodeTrigger initialTrigger = new NodeTrigger();
-        _nodeDiscovery.addListener(initialTrigger);
-
-        register(FOO_BUCKET, FOO);
-        assertTrue(initialTrigger.addedWithin(10, TimeUnit.SECONDS));
-
-        NodeTrigger trigger = new NodeTrigger();
-        _nodeDiscovery.addListener(trigger);
-
-        killSession(_nodeDiscovery.getCurator());
-
-        // The entry gets cleaned up because we've lost contact with ZooKeeper
-        assertTrue(trigger.removedWithin(10, TimeUnit.SECONDS));
-
-        // Then it automatically gets created when the connection is re-established with ZooKeeper
-        assertTrue(trigger.addedWithin(10, TimeUnit.SECONDS));
-    }
-
-    @Test
     public void testMultipleListeners() throws Exception {
-        NodeTrigger trigger1 = new NodeTrigger();
-        NodeTrigger trigger2 = new NodeTrigger();
+        Node.NodeTrigger trigger1 = new Node.NodeTrigger();
+        Node.NodeTrigger trigger2 = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger1);
         _nodeDiscovery.addListener(trigger2);
 
@@ -415,12 +353,12 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     @Test
     public void testZooKeeperResetFires() throws Exception {
-        NodeTrigger trigger = new NodeTrigger();
+        Node.NodeTrigger trigger = new Node.NodeTrigger();
         _nodeDiscovery.addListener(trigger);
 
         killSession(_nodeDiscovery.getCurator());
 
-        assertTrue(trigger.resetWithin(10, TimeUnit.SECONDS));
+        assertTrue(trigger.suspendedWithin(10, TimeUnit.SECONDS));
     }
 
     @Test
@@ -461,115 +399,4 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
         return waitUntilSize(map, size, 10, TimeUnit.SECONDS);
     }
 
-    private static final class NodeTrigger implements NodeListener<Node> {
-        private final Optional<Node> _expected;
-
-        private final Trigger _addTrigger = new Trigger();
-        private final Trigger _removeTrigger = new Trigger();
-        private final Trigger _updateTrigger = new Trigger();
-        private final Trigger _resetTrigger = new Trigger();
-
-        public NodeTrigger() {
-            this(Optional.<Node>absent());
-        }
-
-        public NodeTrigger(Node expected) {
-            this(Optional.fromNullable(expected));
-        }
-
-        public NodeTrigger(Optional<Node> expected) {
-            checkNotNull(expected);
-
-            _expected = expected;
-        }
-
-        @Override
-        public void onNodeAdded(String path, Node node) {
-            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
-                _addTrigger.fire();
-            }
-        }
-
-        @Override
-        public void onNodeRemoved(String path, Node node) {
-            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
-                _removeTrigger.fire();
-            }
-        }
-
-        @Override
-        public void onNodeUpdated(String path, Node node) {
-            if (!_expected.isPresent() || Objects.equal(_expected, node)) {
-                _updateTrigger.fire();
-            }
-        }
-
-        @Override
-        public void onZooKeeperReset() {
-            _resetTrigger.fire();
-        }
-
-        public boolean addedWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _addTrigger.firedWithin(duration, unit);
-        }
-
-        public boolean removedWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _removeTrigger.firedWithin(duration, unit);
-        }
-
-        public boolean updatedWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _updateTrigger.firedWithin(duration, unit);
-        }
-
-        public boolean resetWithin(long duration, TimeUnit unit) throws InterruptedException {
-            return _resetTrigger.firedWithin(duration, unit);
-        }
-    }
-
-    private static final class CountingListener implements NodeListener<Node> {
-        private int _numAdds;
-        private int _numRemoves;
-        private int _numUpdates;
-        private int _numResets;
-
-        @Override
-        public void onNodeAdded(String path, Node node) {
-            _numAdds++;
-        }
-
-        @Override
-        public void onNodeRemoved(String path, Node node) {
-            _numRemoves++;
-        }
-
-        @Override
-        public void onNodeUpdated(String path, Node node) {
-            _numUpdates++;
-        }
-
-        @Override
-        public void onZooKeeperReset() {
-            _numResets++;
-        }
-
-        public int getNumAdds() {
-            return _numAdds;
-        }
-
-        public int getNumRemoves() {
-            return _numRemoves;
-        }
-
-        public int getNumResets() {
-            return _numResets;
-        }
-
-        public int getNumUpdates() {
-            return _numUpdates;
-        }
-
-        public int getNumEvents() {
-            return _numAdds + _numRemoves + _numUpdates + _numResets;
-        }
-    }
 }

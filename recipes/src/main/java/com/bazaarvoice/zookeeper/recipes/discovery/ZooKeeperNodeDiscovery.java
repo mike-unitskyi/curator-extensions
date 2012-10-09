@@ -6,7 +6,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -138,6 +137,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     @Override
     public synchronized void close() throws IOException {
         _closed = true;
+        _executor.shutdown();
         _listeners.clear();
         _pathCache.close();
         _nodes.clear();
@@ -220,19 +220,6 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         }
     }
 
-    private synchronized void clearNodes() {
-        // synchronize the modification of _nodes and firing of events so listeners always receive events in the
-        // order they occur.
-        Map<String, Optional<T>> nodes = ImmutableMap.copyOf(_nodes);
-        _nodes.clear();
-
-        fireResetEvent();
-
-        for (String path : nodes.keySet()) {
-            fireRemoveEvent(path, nodes.get(path).orNull());
-        }
-    }
-
     private void fireAddEvent(String path, T node) {
         for (NodeListener<T> listener : _listeners) {
             listener.onNodeAdded(path, node);
@@ -251,9 +238,9 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         }
     }
 
-    private void fireResetEvent() {
+    private void fireZooKeeperEvent(NodeListener.ZooKeeperEvent event) {
         for (NodeListener<T> listener : _listeners) {
-            listener.onZooKeeperReset();
+            listener.onZooKeeperEvent(event);
         }
     }
 
@@ -276,19 +263,12 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     private final class PathListener implements PathChildrenCacheListener {
         @Override
         public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
-            if (event.getType() == PathChildrenCacheEvent.Type.CONNECTION_LOST ||
-                    event.getType() == PathChildrenCacheEvent.Type.CONNECTION_SUSPENDED) {
-                clearNodes();
-                return;
+            String nodePath = null;
+            T nodeData = null;
+            if (event.getData() != null) {
+                nodePath = event.getData().getPath();
+                nodeData = parseChildData(event.getData());
             }
-
-            if (event.getType() == PathChildrenCacheEvent.Type.CONNECTION_RECONNECTED) {
-                loadExistingData();
-                return;
-            }
-
-            String nodePath = event.getData().getPath();
-            T nodeData = parseChildData(event.getData());
             switch (event.getType()) {
                 case CHILD_ADDED:
                     addNode(nodePath, nodeData);
@@ -300,6 +280,18 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
 
                 case CHILD_UPDATED:
                     updateNode(nodePath, nodeData);
+                    break;
+
+                case CONNECTION_SUSPENDED:
+                    fireZooKeeperEvent(NodeListener.ZooKeeperEvent.SUSPENDED);
+                    break;
+
+                case CONNECTION_LOST:
+                    fireZooKeeperEvent(NodeListener.ZooKeeperEvent.LOST);
+                    break;
+
+                case CONNECTION_RECONNECTED:
+                    fireZooKeeperEvent(NodeListener.ZooKeeperEvent.RECONNECTED);
                     break;
             }
         }
