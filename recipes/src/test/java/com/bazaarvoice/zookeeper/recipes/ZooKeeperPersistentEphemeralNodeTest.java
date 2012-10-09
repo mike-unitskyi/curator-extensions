@@ -29,10 +29,13 @@ public class ZooKeeperPersistentEphemeralNodeTest extends ZooKeeperTest {
     private Collection<ZooKeeperPersistentEphemeralNode> _createdNodes = Lists.newArrayList();
 
     @After
+    @Override
     public void teardown() throws Exception {
         for (ZooKeeperPersistentEphemeralNode node : _createdNodes) {
             node.close(10, TimeUnit.SECONDS);
         }
+
+        super.teardown();
     }
 
     @Test(expected = NullPointerException.class)

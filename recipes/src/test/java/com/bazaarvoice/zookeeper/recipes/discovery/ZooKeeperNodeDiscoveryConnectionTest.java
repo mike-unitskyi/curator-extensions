@@ -4,7 +4,6 @@ import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.bazaarvoice.zookeeper.test.ZooKeeperTest;
 import com.netflix.curator.framework.CuratorFramework;
-import com.netflix.curator.framework.state.ConnectionState;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -36,11 +35,11 @@ public class ZooKeeperNodeDiscoveryConnectionTest extends ZooKeeperTest {
 
         nodeDiscovery.start();
 
-        restartZooKeeper();
+        stopZooKeeper();
 
         assertTrue(lostTrigger.firedWithin(10, TimeUnit.SECONDS));
 
-        ConnectionTrigger reconnectedTrigger = new ConnectionTrigger(ConnectionState.RECONNECTED);
+        ConnectionTrigger reconnectedTrigger = ConnectionTrigger.reconnectedTrigger();
         curator.getConnectionStateListenable().addListener(reconnectedTrigger);
 
         startZooKeeper();

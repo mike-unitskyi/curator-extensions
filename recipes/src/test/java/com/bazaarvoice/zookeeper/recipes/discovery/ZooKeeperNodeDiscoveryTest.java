@@ -8,6 +8,8 @@ import com.google.common.io.Closeables;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Map;
@@ -57,12 +59,18 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
 
     private ZooKeeperNodeDiscovery<Node> _nodeDiscovery;
 
+    @Before
+    @Override
     public void setup() throws Exception {
+        super.setup();
+
         _nodeDiscovery = new ZooKeeperNodeDiscovery<Node>(newZooKeeperConnection(), makeBasePath(FOO_BUCKET),
                 Node.PARSER);
         _nodeDiscovery.start();
     }
 
+    @After
+    @Override
     public void teardown() throws Exception {
         Closeables.closeQuietly(_nodeDiscovery);
 
@@ -70,6 +78,8 @@ public class ZooKeeperNodeDiscoveryTest extends ZooKeeperTest {
             node.close(10, TimeUnit.SECONDS);
         }
         _nodes.clear();
+
+        super.teardown();
     }
 
     @Test(expected = NullPointerException.class)

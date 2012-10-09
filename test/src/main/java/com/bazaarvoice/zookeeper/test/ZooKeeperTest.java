@@ -24,12 +24,14 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public abstract class ZooKeeperTest {
     private TestingServer _zooKeeperServer;
     private InstanceSpec _instanceSpec;
+    private boolean _setupCalled;
 
     /** All of the curator instances that we've created running the test. */
     private List<CuratorFramework> _curatorInstances = Lists.newArrayList();
@@ -38,13 +40,14 @@ public abstract class ZooKeeperTest {
     private List<ZooKeeperConnection> _connections = Lists.newArrayList();
 
     @Before
-    public final void setupZooKeeperTest() throws Exception {
+    public void setup() throws Exception {
+        _setupCalled = true;
         _instanceSpec = InstanceSpec.newInstanceSpec();
         startZooKeeper();
     }
 
     @After
-    public final void tearDownZooKeeperTest() throws Exception {
+    public void teardown() throws Exception {
         for (ZooKeeperConnection connection : _connections) {
             Closeables.closeQuietly(connection);
         }
@@ -80,6 +83,8 @@ public abstract class ZooKeeperTest {
     }
 
     public ZooKeeperConnection newZooKeeperConnection(ZooKeeperConfiguration configuration) {
+        assertTrue("setup() method has not been called. Subclasses should call super.setup()", _setupCalled);
+
         ZooKeeperConnection connection = configuration
                 .withConnectString(_instanceSpec.getConnectString())
                 .connect();
@@ -94,6 +99,8 @@ public abstract class ZooKeeperTest {
     }
 
     public CuratorFramework newCurator(CuratorFrameworkFactory.Builder builder) throws Exception {
+        assertTrue("setup() method has not been called. Subclasses should call super.setup()", _setupCalled);
+
         CuratorFramework curator = builder
                 .connectString(_instanceSpec.getConnectString())
                 .build();
