@@ -20,4 +20,10 @@ public interface ZooKeeperConnection extends Closeable {
      * namespace must be a valid ZooKeeper path (starts with '/', does not end with '/', etc).
      */
     ZooKeeperConnection withNamespace(String namespace);
+
+    /**
+     * Returns a new instance of {@code ZooKeeperConnection} that shares the same underlying connection to ZooKeeper
+     * but scopes all reads and writes to the global namespace.
+     */
+    ZooKeeperConnection withNoNamespace();
 }
