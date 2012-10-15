@@ -52,7 +52,6 @@ public class ZooKeeperConnectionTest {
         return connection;
     }
 
-
     @Test
     public void testConnectToConnectString() throws Exception {
         ZooKeeperConfiguration config = newConfiguration();
