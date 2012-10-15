@@ -16,7 +16,9 @@ import static org.junit.Assert.assertNotNull;
 public class ZooKeeperConnectionTest {
     private TestingServer _zooKeeperServer;
 
-    /** All of the connection instances that we've created running the test. */
+    /**
+     * All of the connection instances that we've created running the test.
+     */
     private List<ZooKeeperConnection> _connections = Lists.newArrayList();
 
     @Before
@@ -48,6 +50,14 @@ public class ZooKeeperConnectionTest {
         _connections.add(connection);
 
         return connection;
+    }
+
+    @Test
+    public void testConnectToConnectString() throws Exception {
+        ZooKeeperConfiguration config = newConfiguration();
+        CuratorConnection connection = (CuratorConnection) connect(config);
+        assertEquals(config.getConnectString(),
+                connection.getCurator().getZookeeperClient().getCurrentConnectionString());
     }
 
     @Test

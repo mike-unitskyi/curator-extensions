@@ -1,12 +1,13 @@
 package com.bazaarvoice.zookeeper.dropwizard;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.netflix.curator.RetryPolicy;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * ZooKeeper connection configuration class.
- * <p>
+ * <p/>
  * This class is designed to map easily to YAML configuration files, deserialized using Jackson.
  */
 public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperConfiguration {
@@ -15,6 +16,7 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
      * connection string must list at least one live member of the ZooKeeper ensemble, and
      * should list all members of the ZooKeeper ensemble in case any one member is temporarily
      * unavailable.
+     *
      * @param connectString A ZooKeeper connection string.
      */
     @JsonProperty
@@ -24,8 +26,8 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
     }
 
     @VisibleForTesting
-    protected String getConnectString() {
-        return super.getConnectString();
+    protected void setConnectStringSupplier(Supplier<String> supplier) {
+        super.setConnectStringSupplier(supplier);
     }
 
     /**

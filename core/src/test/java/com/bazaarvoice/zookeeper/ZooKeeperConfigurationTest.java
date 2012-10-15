@@ -1,7 +1,6 @@
 package com.bazaarvoice.zookeeper;
 
-import com.bazaarvoice.chameleon.Chameleon;
-import com.bazaarvoice.zookeeper.internal.CuratorConnection;
+import com.google.common.base.Suppliers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -77,10 +76,14 @@ public class ZooKeeperConfigurationTest {
     }
 
     @Test
-    public void testChameleonUsed() throws IOException {
-        CuratorConnection connection = (CuratorConnection) _config.connect();
-        assertEquals(Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue(),
-                connection.getCurator().getZookeeperClient().getCurrentConnectionString());
-        connection.close();
+    public void testNoConnectString() throws IOException {
+        _config.setConnectStringSupplier(Suppliers.ofInstance("test.default.connect.string:2181"));
+        assertEquals("test.default.connect.string:2181", _config.getConnectString());
+    }
+
+    @Test
+    public void testWithConnectString() throws IOException {
+        _config.withConnectString("test.connect.string:2181");
+        assertEquals("test.connect.string:2181", _config.getConnectString());
     }
 }

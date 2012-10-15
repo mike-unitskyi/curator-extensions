@@ -1,5 +1,6 @@
 package com.bazaarvoice.zookeeper.dropwizard;
 
+import com.google.common.base.Suppliers;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.MappingJsonFactory;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -18,7 +19,9 @@ public class ZooKeeperConfigurationTest {
     @Test
     public void testJsonDefaults() throws IOException {
         ZooKeeperConfiguration config = fromJson("{}");
-        assertEquals(null, config.getConnectString());
+        config.setConnectStringSupplier(Suppliers.ofInstance("test.default.connect.string:2181"));
+
+        assertEquals("test.default.connect.string:2181", config.getConnectString());
         assertTrue(config.getRetryPolicy() instanceof com.netflix.curator.retry.BoundedExponentialBackoffRetry);
     }
 
