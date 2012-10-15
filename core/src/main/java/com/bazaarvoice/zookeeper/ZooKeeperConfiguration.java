@@ -26,23 +26,24 @@ public class ZooKeeperConfiguration {
      * Returns a new {@link ZooKeeperConnection} with the current configuration settings. If the connection string
      * has not been explicitly set, {@link Chameleon} will attempt to infer the correct connection string prior
      * to connecting.
+     *
      * @return A new {@link ZooKeeperConnection} with the current configuration settings.
      */
     public ZooKeeperConnection connect() {
-        if (_connectString == null) {
-            _connectString = Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue();
-        }
-        return new CuratorConnection(_connectString, _retryPolicy, _namespace);
+        return new CuratorConnection(getConnectString(), _retryPolicy, _namespace);
     }
 
     /**
      * NOTE: If no connect string has been explicitly set, this method will return the default value, {@code null}.
      * However, {@link Chameleon} will attempt to infer a connection string when {@link #connect()} is called.
+     *
      * @return String representation of the ZooKeeper ensemble that this configuration points to.  {@code null}
-     * indicates that this has not been explicitly set.
+     *         indicates that this has not been explicitly set.
      */
-    @VisibleForTesting
-    protected String getConnectString() {
+    public String getConnectString() {
+        if (_connectString == null) {
+            _connectString = Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue();
+        }
         return _connectString;
     }
 
@@ -51,6 +52,7 @@ public class ZooKeeperConfiguration {
      * connection string must list at least one live member of the ZooKeeper ensemble, and
      * should list all members of the ZooKeeper ensemble in case any one member is temporarily
      * unavailable.
+     *
      * @param connectString A ZooKeeper connection string.
      */
     public ZooKeeperConfiguration withConnectString(String connectString) {
@@ -74,7 +76,7 @@ public class ZooKeeperConfiguration {
 
         // The Curator retry policies take as a parameter the number of times a retry is allowed.  So we convert
         // maxNumAttempts into maxNumRetries.
-        _retryPolicy = new BoundedExponentialBackoffRetry(initialSleepTimeMs, maxSleepTimeMs, maxNumAttempts-1);
+        _retryPolicy = new BoundedExponentialBackoffRetry(initialSleepTimeMs, maxSleepTimeMs, maxNumAttempts - 1);
         return this;
     }
 

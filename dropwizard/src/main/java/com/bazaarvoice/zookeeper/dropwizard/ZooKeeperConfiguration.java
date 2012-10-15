@@ -6,7 +6,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * ZooKeeper connection configuration class.
- * <p>
+ * <p/>
  * This class is designed to map easily to YAML configuration files, deserialized using Jackson.
  */
 public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperConfiguration {
@@ -15,17 +15,13 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
      * connection string must list at least one live member of the ZooKeeper ensemble, and
      * should list all members of the ZooKeeper ensemble in case any one member is temporarily
      * unavailable.
+     *
      * @param connectString A ZooKeeper connection string.
      */
     @JsonProperty
     public ZooKeeperConfiguration setConnectString(String connectString) {
         withConnectString(connectString);
         return this;
-    }
-
-    @VisibleForTesting
-    protected String getConnectString() {
-        return super.getConnectString();
     }
 
     /**

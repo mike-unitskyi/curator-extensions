@@ -16,32 +16,32 @@ public class ZooKeeperConfigurationTest {
         _config.withBoundedExponentialBackoffRetry(10, 100, 1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testNegativeInitialSleepTime() {
         _config.withBoundedExponentialBackoffRetry(-1, 10, 1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testZeroInitialSleepTime() {
         _config.withBoundedExponentialBackoffRetry(0, 10, 1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testNegativeMaxSleepTime() {
         _config.withBoundedExponentialBackoffRetry(10, -1, 1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testZeroMaxSleepTime() {
         _config.withBoundedExponentialBackoffRetry(10, 0, 1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testNegativeAttemptsBoundedExponentialBackoffRetry() {
         _config.withBoundedExponentialBackoffRetry(10, 100, -1);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testZeroAttemptsBoundedExponentialBackoffRetry() {
         _config.withBoundedExponentialBackoffRetry(10, 100, 0);
     }
@@ -66,21 +66,35 @@ public class ZooKeeperConfigurationTest {
         _config.withNamespace("/parent");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testRelativeNamespace() {
         _config.withNamespace("parent");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test (expected = IllegalArgumentException.class)
     public void testTrailingSlashNamespace() {
         _config.withNamespace("/parent/");
     }
 
     @Test
-    public void testChameleonUsed() throws IOException {
+    public void testNoConnectString()
+            throws IOException {
+        //Chameleon used to get default connect string
+        assertEquals(Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue(), _config.getConnectString());
+    }
+
+    @Test
+    public void testWithConnectString()
+            throws IOException {
+        _config.withConnectString("test.connect.string:2181");
+        assertEquals("test.connect.string:2181", _config.getConnectString());
+    }
+
+    @Test
+    public void testConnectToConnectString()
+            throws IOException {
         CuratorConnection connection = (CuratorConnection) _config.connect();
-        assertEquals(Chameleon.RESOURCES.ZOOKEEPER_ENSEMBLE.getValue(),
-                connection.getCurator().getZookeeperClient().getCurrentConnectionString());
+        assertEquals(_config.getConnectString(), connection.getCurator().getZookeeperClient().getCurrentConnectionString());
         connection.close();
     }
 }
