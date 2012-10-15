@@ -22,14 +22,12 @@ public class ZooKeeperConnectionTest {
     private List<ZooKeeperConnection> _connections = Lists.newArrayList();
 
     @Before
-    public void setup()
-            throws Exception {
+    public void setup() throws Exception {
         _zooKeeperServer = new TestingServer();
     }
 
     @After
-    public void teardown()
-            throws Exception {
+    public void teardown() throws Exception {
         for (ZooKeeperConnection connection : _connections) {
             Closeables.closeQuietly(connection);
         }
@@ -42,7 +40,7 @@ public class ZooKeeperConnectionTest {
         // Set minimal configuration settings
         return new ZooKeeperConfiguration()
                 .withConnectString(_zooKeeperServer.getConnectString())
-                        // For test case purposes don't retry at all.  This should never be done in production!!!
+                // For test case purposes don't retry at all.  This should never be done in production!!!
                 .withBoundedExponentialBackoffRetry(100, 1000, 1);
     }
 
