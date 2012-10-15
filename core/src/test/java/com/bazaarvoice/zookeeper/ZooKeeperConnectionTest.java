@@ -16,16 +16,20 @@ import static org.junit.Assert.assertNotNull;
 public class ZooKeeperConnectionTest {
     private TestingServer _zooKeeperServer;
 
-    /** All of the connection instances that we've created running the test. */
+    /**
+     * All of the connection instances that we've created running the test.
+     */
     private List<ZooKeeperConnection> _connections = Lists.newArrayList();
 
     @Before
-    public void setup() throws Exception {
+    public void setup()
+            throws Exception {
         _zooKeeperServer = new TestingServer();
     }
 
     @After
-    public void teardown() throws Exception {
+    public void teardown()
+            throws Exception {
         for (ZooKeeperConnection connection : _connections) {
             Closeables.closeQuietly(connection);
         }
@@ -38,7 +42,7 @@ public class ZooKeeperConnectionTest {
         // Set minimal configuration settings
         return new ZooKeeperConfiguration()
                 .withConnectString(_zooKeeperServer.getConnectString())
-                // For test case purposes don't retry at all.  This should never be done in production!!!
+                        // For test case purposes don't retry at all.  This should never be done in production!!!
                 .withBoundedExponentialBackoffRetry(100, 1000, 1);
     }
 
@@ -48,6 +52,15 @@ public class ZooKeeperConnectionTest {
         _connections.add(connection);
 
         return connection;
+    }
+
+
+    @Test
+    public void testConnectToConnectString() throws Exception {
+        ZooKeeperConfiguration config = newConfiguration();
+        ZooKeeperConnection connection = connect(config);
+        assertEquals(config.getConnectString(),
+                ((CuratorConnection) connection).getCurator().getZookeeperClient().getCurrentConnectionString());
     }
 
     @Test

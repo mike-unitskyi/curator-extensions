@@ -1,6 +1,7 @@
 package com.bazaarvoice.zookeeper.dropwizard;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
 import com.netflix.curator.RetryPolicy;
 import org.codehaus.jackson.annotate.JsonProperty;
 
@@ -22,6 +23,11 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
     public ZooKeeperConfiguration setConnectString(String connectString) {
         withConnectString(connectString);
         return this;
+    }
+
+    @VisibleForTesting
+    protected void setConnectStringSupplier(Supplier<String> supplier) {
+        super.setConnectStringSupplier(supplier);
     }
 
     /**
