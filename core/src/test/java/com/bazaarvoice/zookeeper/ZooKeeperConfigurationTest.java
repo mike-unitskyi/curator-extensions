@@ -83,7 +83,6 @@ public class ZooKeeperConfigurationTest {
 
     @Test
     public void testWithConnectString() throws IOException {
-        _config.setConnectStringSupplier(Suppliers.ofInstance("test.default.connect.string:2181"));
         _config.withConnectString("test.connect.string:2181");
         assertEquals("test.connect.string:2181", _config.getConnectString());
     }

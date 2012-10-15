@@ -55,9 +55,9 @@ public class ZooKeeperConnectionTest {
     @Test
     public void testConnectToConnectString() throws Exception {
         ZooKeeperConfiguration config = newConfiguration();
-        ZooKeeperConnection connection = connect(config);
+        CuratorConnection connection = (CuratorConnection) connect(config);
         assertEquals(config.getConnectString(),
-                ((CuratorConnection) connection).getCurator().getZookeeperClient().getCurrentConnectionString());
+                connection.getCurator().getZookeeperClient().getCurrentConnectionString());
     }
 
     @Test
