@@ -8,6 +8,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
+import com.netflix.curator.framework.imps.CuratorFrameworkState;
 import com.netflix.curator.framework.state.ConnectionState;
 import com.netflix.curator.framework.state.ConnectionStateListener;
 import com.netflix.curator.retry.RetryNTimes;
@@ -119,7 +120,7 @@ public abstract class ZooKeeperTest {
 
     public ZooKeeperConnection newMockZooKeeperConnection() throws Exception {
         CuratorFramework curator = mock(CuratorFramework.class);
-        when(curator.isStarted()).thenReturn(true);
+        when(curator.getState()).thenReturn(CuratorFrameworkState.STARTED);
         return newMockZooKeeperConnection(curator);
     }
 
