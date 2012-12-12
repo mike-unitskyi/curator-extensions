@@ -2,7 +2,6 @@ package com.bazaarvoice.zookeeper.recipes.discovery;
 
 import com.bazaarvoice.zookeeper.ZooKeeperConnection;
 import com.bazaarvoice.zookeeper.internal.CuratorConnection;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -10,6 +9,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.imps.CuratorFrameworkState;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -66,7 +66,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         checkNotNull(curator);
         checkNotNull(nodePath);
         checkNotNull(parser);
-        checkArgument(curator.isStarted());
+        checkArgument(curator.getState() == CuratorFrameworkState.STARTED);
         checkArgument(!"".equals(nodePath));
 
         ThreadFactory threadFactory = new ThreadFactoryBuilder()

@@ -8,6 +8,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.api.PathAndBytesable;
+import com.netflix.curator.framework.imps.CuratorFrameworkState;
 import com.netflix.curator.utils.EnsurePath;
 import com.netflix.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
@@ -54,7 +55,7 @@ public class ZooKeeperPersistentEphemeralNode {
     public ZooKeeperPersistentEphemeralNode(ZooKeeperConnection connection, String basePath, byte[] data, CreateMode mode) {
         CuratorFramework curator = ((CuratorConnection) checkNotNull(connection)).getCurator();
         checkNotNull(curator);
-        checkArgument(curator.isStarted());
+        checkArgument(curator.getState() == CuratorFrameworkState.STARTED);
         checkNotNull(basePath);
         checkNotNull(data);
         checkNotNull(mode);
