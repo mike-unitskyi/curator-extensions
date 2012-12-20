@@ -5,6 +5,10 @@ import com.yammer.dropwizard.lifecycle.Managed;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+/**
+ * Managed interface for ZooKeeperConnection.  This will cleanly close the ZooKeeper connection when a Dropwizard
+ * application shuts down.
+ */
 public class ManagedZooKeeperConnection implements Managed {
     private final ZooKeeperConnection _zookeeper;
 
