@@ -7,6 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class ManagedZooKeeperConnectionTest {
+    @Test(expected = NullPointerException.class)
+    public void testNullConnection() {
+        new ManagedZooKeeperConnection(null);
+    }
+
     @Test
     public void testClosesOnStop() throws Exception {
         ZooKeeperConnection zookeeper = mock(ZooKeeperConnection.class);
