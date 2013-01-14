@@ -16,7 +16,7 @@
     <description>Helpers for using zookeeper-core with Dropwizard</description>
 
     <properties>
-        <dropwizard.version>0.5.1</dropwizard.version>
+        <dropwizard.version>0.6.1</dropwizard.version>
     </properties>
 
     <dependencies>

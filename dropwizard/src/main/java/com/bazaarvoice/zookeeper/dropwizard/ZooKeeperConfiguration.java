@@ -1,9 +1,9 @@
 package com.bazaarvoice.zookeeper.dropwizard;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.netflix.curator.RetryPolicy;
-import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
  * ZooKeeper connection configuration class.
