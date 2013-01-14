@@ -4,7 +4,7 @@
 
     <groupId>com.bazaarvoice.zookeeper</groupId>
     <artifactId>zookeeper</artifactId>
-    <version>0.0.14-SNAPSHOT</version>
+    <version>0.0.15-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -43,7 +43,7 @@
             <dependency>
                 <groupId>com.bazaarvoice.chameleon</groupId>
                 <artifactId>chameleon-core</artifactId>
-                <version>0.1.4</version>
+                <version>0.1.5</version>
             </dependency>
 
             <dependency>
