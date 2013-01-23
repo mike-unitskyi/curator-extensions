@@ -2,7 +2,6 @@ package com.bazaarvoice.zookeeper.dropwizard;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Supplier;
 import com.netflix.curator.RetryPolicy;
 
 /**
@@ -25,11 +24,6 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
         return this;
     }
 
-    @VisibleForTesting
-    protected void setConnectStringSupplier(Supplier<String> supplier) {
-        super.setConnectStringSupplier(supplier);
-    }
-
     /**
      * Sets a retry policy that retries a set number of times with increasing sleep time between retries up to a
      * maximum sleep time.
@@ -38,11 +32,6 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
     public ZooKeeperConfiguration setRetry(BoundedExponentialBackoffRetry retry) {
         withBoundedExponentialBackoffRetry(retry.baseSleepTimeMs, retry.maxSleepTimeMs, retry.maxAttempts);
         return this;
-    }
-
-    @VisibleForTesting
-    protected RetryPolicy getRetryPolicy() {
-        return super.getRetryPolicy();
     }
 
     /**
@@ -54,6 +43,16 @@ public class ZooKeeperConfiguration extends com.bazaarvoice.zookeeper.ZooKeeperC
     public ZooKeeperConfiguration setNamespace(String namespace) {
         withNamespace(namespace);
         return this;
+    }
+
+    @VisibleForTesting
+    protected String getConnectString() {
+        return super.getConnectString();
+    }
+
+    @VisibleForTesting
+    protected RetryPolicy getRetryPolicy() {
+        return super.getRetryPolicy();
     }
 
     @VisibleForTesting
