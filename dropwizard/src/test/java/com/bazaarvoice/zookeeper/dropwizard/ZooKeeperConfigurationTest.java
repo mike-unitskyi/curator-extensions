@@ -18,10 +18,9 @@ public class ZooKeeperConfigurationTest {
 
     @Test
     public void testJsonDefaults() throws IOException {
-        ZooKeeperConfiguration config = fromJson("{}");
-        config.setConnectStringSupplier(Suppliers.ofInstance("test.default.connect.string:2181"));
+        ZooKeeperConfiguration config = fromJson("{'connectString':'prod-zk-1:12345'}");
 
-        assertEquals("test.default.connect.string:2181", config.getConnectString());
+        assertEquals("prod-zk-1:12345", config.getConnectString());
         assertTrue(config.getRetryPolicy() instanceof com.netflix.curator.retry.BoundedExponentialBackoffRetry);
     }
 

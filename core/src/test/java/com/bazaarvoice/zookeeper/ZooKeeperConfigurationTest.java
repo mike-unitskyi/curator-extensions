@@ -1,6 +1,5 @@
 package com.bazaarvoice.zookeeper;
 
-import com.google.common.base.Suppliers;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -75,10 +74,9 @@ public class ZooKeeperConfigurationTest {
         _config.withNamespace("/parent/");
     }
 
-    @Test
-    public void testNoConnectString() throws IOException {
-        _config.setConnectStringSupplier(Suppliers.ofInstance("test.default.connect.string:2181"));
-        assertEquals("test.default.connect.string:2181", _config.getConnectString());
+    @Test(expected = NullPointerException.class)
+    public void testNoConnectString() {
+        _config.connect();
     }
 
     @Test
