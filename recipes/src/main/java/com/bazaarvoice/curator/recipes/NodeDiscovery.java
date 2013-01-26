@@ -1,7 +1,6 @@
-package com.bazaarvoice.zookeeper.recipes.discovery;
+package com.bazaarvoice.curator.recipes;
 
-import com.bazaarvoice.zookeeper.ZooKeeperConnection;
-import com.bazaarvoice.zookeeper.internal.CuratorConnection;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -22,6 +21,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -31,21 +31,22 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * The {@code ZooKeeperNodeDiscovery} class is used to watch a path in ZooKeeper. It will monitor which nodes
+ * The {@code NodeDiscovery} class is used to watch a path in ZooKeeper. It will monitor which nodes
  * exist and fire node change events to subscribed instances of {@code NodeListener}. Users of this class should not
  * cache the results of discovery as subclasses can choose to change the set of available nodes based on some external
  * mechanism (ex. using bouncer).
  *
  * @param <T> The type that will be used to represent an active node.
  */
-public class ZooKeeperNodeDiscovery<T> implements Closeable {
-    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperNodeDiscovery.class);
+public class NodeDiscovery<T> implements Closeable {
+    private static final Logger LOG = LoggerFactory.getLogger(NodeDiscovery.class);
 
     /** How long in milliseconds to wait between attempts to start. */
     private static final long WAIT_DURATION_IN_MILLIS = 100;
 
-    private final Map<String, Optional<T>> _nodes;
+    private final ConcurrentMap<String, Optional<T>> _nodes;
     private final Set<NodeListener<T>> _listeners;
+    private final CuratorFramework _curator;
     private final PathChildrenCache _pathCache;
     private final NodeDataParser<T> _nodeDataParser;
     private final ScheduledExecutorService _executor;
@@ -54,15 +55,11 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
     /**
      * Creates an instance of {@code ZooKeeperNodeDiscovery}.
      *
-     * @param connection ZooKeeper connection.
+     * @param curator    Curator framework reference.
      * @param nodePath   The path in ZooKeeper to watch.
      * @param parser     The strategy to convert from ZooKeeper {@code byte[]} to {@code T}.
      */
-    public ZooKeeperNodeDiscovery(ZooKeeperConnection connection, String nodePath, NodeDataParser<T> parser) {
-        checkNotNull(connection);
-        checkArgument(connection instanceof CuratorConnection);
-
-        CuratorFramework curator = ((CuratorConnection) connection).getCurator();
+    public NodeDiscovery(CuratorFramework curator, String nodePath, NodeDataParser<T> parser) {
         checkNotNull(curator);
         checkNotNull(nodePath);
         checkNotNull(parser);
@@ -76,6 +73,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
 
         _nodes = Maps.newConcurrentMap();
         _listeners = Sets.newSetFromMap(Maps.<NodeListener<T>, Boolean>newConcurrentMap());
+        _curator = curator;
         _pathCache = new PathChildrenCache(curator, nodePath, true, threadFactory);
         _nodeDataParser = parser;
         _executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
@@ -99,7 +97,7 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
         return Maps.transformValues(Collections.unmodifiableMap(_nodes), new Function<Optional<T>, T>() {
             @Override
             public T apply(Optional<T> input) {
-                return input.orNull();
+                return (input != null) ? input.orNull() : null;
             }
         });
     }
@@ -134,11 +132,18 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
 
     @Override
     public synchronized void close() throws IOException {
-        _closed = true;
-        _executor.shutdown();
-        _listeners.clear();
-        _pathCache.close();
-        _nodes.clear();
+        if (!_closed) {
+            _closed = true;
+            _executor.shutdown();
+            _listeners.clear();
+            _pathCache.close();
+            _nodes.clear();
+        }
+    }
+
+    @VisibleForTesting
+    CuratorFramework getCurator() {
+        return _curator;
     }
 
     /**
@@ -270,5 +275,20 @@ public class ZooKeeperNodeDiscovery<T> implements Closeable {
                     break;
             }
         }
+    }
+
+    /**
+     * The {@code NodeDataParser} class is used to encapsulate the strategy that converts ZooKeeper node data into
+     * a logical format for the user of {@code NodeDiscovery}.
+     */
+    public static interface NodeDataParser<T> {
+        T parse(String path, byte[] nodeData);
+    }
+
+    /** Listener interface that is notified when nodes are added, removed, or updated. */
+    public static interface NodeListener<T> {
+        void onNodeAdded(String path, T node);
+        void onNodeRemoved(String path, T node);
+        void onNodeUpdated(String path, T node);
     }
 }

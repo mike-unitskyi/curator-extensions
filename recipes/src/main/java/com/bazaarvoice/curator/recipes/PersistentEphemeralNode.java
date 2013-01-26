@@ -1,7 +1,5 @@
-package com.bazaarvoice.zookeeper.recipes;
+package com.bazaarvoice.curator.recipes;
 
-import com.bazaarvoice.zookeeper.ZooKeeperConnection;
-import com.bazaarvoice.zookeeper.internal.CuratorConnection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.SettableFuture;
@@ -33,14 +31,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * A persistent ephemeral node is an ephemeral node that attempts to stay present in ZooKeeper, even through connection
  * and session interruptions.
  */
-public class ZooKeeperPersistentEphemeralNode {
+public class PersistentEphemeralNode {
     private static final long WAIT_DURATION_IN_MILLIS = 100;
 
     /** How long to wait for the node to be initially created in seconds. */
     private static final long CREATION_WAIT_IN_SECONDS = 10;
 
     private static final ThreadFactory THREAD_FACTORY = new ThreadFactoryBuilder()
-            .setNameFormat(ZooKeeperPersistentEphemeralNode.class.getSimpleName() + "Thread-%d")
+            .setNameFormat(PersistentEphemeralNode.class.getSimpleName() + "Thread-%d")
             .setDaemon(true)
             .build();
 
@@ -52,8 +50,7 @@ public class ZooKeeperPersistentEphemeralNode {
      * Create the ephemeral node in ZooKeeper.  If the node cannot be created in a timely fashion then an exception will
      * be thrown.
      */
-    public ZooKeeperPersistentEphemeralNode(ZooKeeperConnection connection, String basePath, byte[] data, CreateMode mode) {
-        CuratorFramework curator = ((CuratorConnection) checkNotNull(connection)).getCurator();
+    public PersistentEphemeralNode(CuratorFramework curator, String basePath, byte[] data, CreateMode mode) {
         checkNotNull(curator);
         checkArgument(curator.getState() == CuratorFrameworkState.STARTED);
         checkNotNull(basePath);
