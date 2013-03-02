@@ -12,14 +12,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class ResolvingEnsembleProviderTest {
-    private static final String TEST_HOSTNAME = "test";
-    private static final String TEST_CONNECT_STRING = "test:2181";
 
     private final ResolvingEnsembleProvider.Resolver _resolver = mock(ResolvingEnsembleProvider.Resolver.class);
 
     @Test
     public void testNameResolves() throws Exception {
-        whenQueried(TEST_HOSTNAME).thenResolveTo("1.1.1.1");
+        whenQueried("test").thenResolveTo("1.1.1.1");
 
         ResolvingEnsembleProvider provider = newProvider();
 
@@ -28,16 +26,16 @@ public class ResolvingEnsembleProviderTest {
 
     @Test
     public void testNameDoesNotResolve() throws Exception {
-        whenQueried(TEST_HOSTNAME).thenFail();
+        whenQueried("test").thenFail();
 
         ResolvingEnsembleProvider provider = newProvider();
 
-        assertEquals(TEST_CONNECT_STRING, provider.getConnectionString());
+        assertEquals("test:2181", provider.getConnectionString());
     }
 
     @Test
     public void testMultipleRecords() throws Exception {
-        whenQueried(TEST_HOSTNAME).thenResolveTo("1.1.1.1", "2.2.2.2");
+        whenQueried("test").thenResolveTo("1.1.1.1", "2.2.2.2");
 
         ResolvingEnsembleProvider provider = newProvider();
 
@@ -47,7 +45,7 @@ public class ResolvingEnsembleProviderTest {
     @Test
     public void testMultipleRecordsCanonical() throws Exception {
         // Return records in different order to simulate round robin DNS.
-        whenQueried(TEST_HOSTNAME).thenResolveTo("1.1.1.1", "2.2.2.2").thenResolveTo("2.2.2.2", "1.1.1.1");
+        whenQueried("test").thenResolveTo("1.1.1.1", "2.2.2.2").thenResolveTo("2.2.2.2", "1.1.1.1");
 
         ResolvingEnsembleProvider provider = newProvider();
 
@@ -68,24 +66,34 @@ public class ResolvingEnsembleProviderTest {
 
     @Test
     public void testChrootPath() throws Exception {
-        whenQueried(TEST_HOSTNAME).thenResolveTo("1.1.1.1");
+        whenQueried("test").thenResolveTo("1.1.1.1");
 
-        ResolvingEnsembleProvider provider = newProvider(TEST_CONNECT_STRING + "/chroot");
+        ResolvingEnsembleProvider provider = newProvider("test:2181/chroot");
 
         assertEquals("1.1.1.1:2181/chroot", provider.getConnectionString());
     }
 
     @Test
     public void testChrootPathNameDoesNotResolve() throws Exception {
-        whenQueried(TEST_HOSTNAME).thenFail();
+        whenQueried("test").thenFail();
 
-        ResolvingEnsembleProvider provider = newProvider(TEST_CONNECT_STRING + "/chroot");
+        ResolvingEnsembleProvider provider = newProvider("test:2181/chroot");
 
         assertEquals("test:2181/chroot", provider.getConnectionString());
     }
 
+    @Test
+    public void testChrootPathMultipleRecords() throws Exception {
+        whenQueried("test").thenResolveTo("1.1.1.1", "2.2.2.2");
+
+        ResolvingEnsembleProvider provider = newProvider("test:2181/chroot");
+
+        assertEquals("1.1.1.1:2181,2.2.2.2:2181/chroot", provider.getConnectionString());
+
+    }
+
     private ResolvingEnsembleProvider newProvider() {
-        return newProvider(TEST_CONNECT_STRING);
+        return newProvider("test:2181");
     }
 
     private ResolvingEnsembleProvider newProvider(String connectString) {
