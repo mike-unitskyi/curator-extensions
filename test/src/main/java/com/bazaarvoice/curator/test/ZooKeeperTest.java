@@ -34,7 +34,7 @@ public abstract class ZooKeeperTest {
      */
     private final InstanceSpec _instanceSpec = InstanceSpec.newInstanceSpec();
 
-    /** All of the curator instances that we've created running the test (so they can be cleaned up later). */
+    /** All of the resources that we've created running the test (so they can be cleaned up later). */
     private final Closer _closer = Closer.create();
 
     @Before
