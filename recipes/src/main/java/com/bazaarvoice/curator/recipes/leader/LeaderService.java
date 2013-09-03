@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Starts and stops a Guava service based on whether this process is elected leader using a Curator leadership
@@ -125,30 +126,32 @@ public class LeaderService extends AbstractIdleService {
     }
 
     private class LeaderTask implements LeaderSelectorListener {
-        private volatile boolean _taskActive;
+        private volatile boolean _delegateActive;
         private volatile boolean _lostLeadership;
 
         @Override
-        public void takeLeadership(CuratorFramework client) throws Exception {
+        public void takeLeadership(CuratorFramework client) {
             _log.debug("Leadership acquired: {}", getId());
 
-            _taskActive = true;
+            _delegateActive = true;
             _lostLeadership = false;
             try {
                 if (isRunning()) {
-                    Service service = _serviceSupplier.get();
-                    service.startAndWait();
+                    Service delegate = listenTo(_serviceSupplier.get());
+                    delegate.startAndWait();
                     try {
-                        awaitLeadershipLost();
+                        awaitLeadershipLostOrServicesStopped(delegate);
+                    } catch (InterruptedException ie) {
+                        // LeaderSelector is being closed.  We will release leadership.
                     } finally {
-                        service.stopAndWait();
+                        delegate.stopAndWait();
                     }
                 }
             } catch (Throwable t) {
                 // Start may have failed due to a network error, we'll sleep for reacquireDelay and try again.
-                _log.error("Exception starting or stopping leadership-managed process: {}", getId(), t);
+                _log.error("Exception starting or stopping leadership-managed service: {}", getId(), t);
             } finally {
-                setTaskInactive();
+                notifyDelegateStopped();
             }
 
             if (!hasLeadership()) {
@@ -163,40 +166,54 @@ public class LeaderService extends AbstractIdleService {
 
             // If we lost leadership, wait a while for things to settle before trying to re-acquire leadership
             // (eg. wait for a network hiccup to the ZooKeeper server to resolve).
-            sleep(_reacquireDelayNanos);
+            try {
+                sleep(_reacquireDelayNanos);
+            } catch (InterruptedException e) {
+                // LeaderSelector is being closed.  We will release leadership.
+                return;
+            }
 
             // By returning we'll attempt to re-acquire leadership via LeaderSelector.autoRequeue().
             _log.debug("Attempting to re-acquire leadership: {}", getId());
         }
 
         public void close() throws InterruptedException {
-            setLeadershipLost();
-            awaitTaskInactive();
+            // Wake up the task if it's currently waiting for leadership to be lost, then wait for the task to
+            // ack back that it has stopped the delegate service.
+            checkState(!isRunning());
+            notifyServiceStopped();
+            awaitDelegateStopped();
         }
 
         public boolean hasLeadership() {
             return _selector.hasLeadership() && !_lostLeadership;
         }
 
-        private synchronized void setLeadershipLost() {
+        private synchronized void notifyLeadershipLost() {
             _lostLeadership = true;
             notifyAll();
         }
 
-        private synchronized void awaitLeadershipLost() throws InterruptedException {
-            while (hasLeadership() && isRunning()) {
+        /** Wake up the task thread since either the parent service or the delegate service has stopped. */
+        private synchronized void notifyServiceStopped() {
+            notifyAll();
+        }
+
+        /** Wait until we loose leadership or this service is stopped or the delegate service has stopped. */
+        private synchronized void awaitLeadershipLostOrServicesStopped(Service delegate) throws InterruptedException {
+            while (hasLeadership() && isRunning() && delegate.isRunning()) {
                 wait();
             }
         }
 
-        private synchronized void setTaskInactive() {
-            _taskActive = false;
+        private synchronized void notifyDelegateStopped() {
+            _delegateActive = false;
             notifyAll();
         }
 
-        /** Sleeps while the nested managed service is started. */
-        private synchronized void awaitTaskInactive() throws InterruptedException {
-            while (_taskActive) {
+        /** Sleeps while the delegate service may be active. */
+        private synchronized void awaitDelegateStopped() throws InterruptedException {
+            while (_delegateActive) {
                 wait();
             }
         }
@@ -214,8 +231,39 @@ public class LeaderService extends AbstractIdleService {
         public void stateChanged(CuratorFramework client, ConnectionState newState) {
             if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
                 _log.debug("Lost leadership due to ZK state change to {}: {}", newState, getId());
-                setLeadershipLost();
+                notifyLeadershipLost();
             }
+        }
+
+        /** Release leadership when the service terminates (normally or abnormally). */
+        private Service listenTo(Service delegate) {
+            delegate.addListener(new Listener() {
+                @Override
+                public void starting() {
+                    // Do nothing
+                }
+
+                @Override
+                public void running() {
+                    // Do nothing
+                }
+
+                @Override
+                public void stopping(State from) {
+                    // Do nothing
+                }
+
+                @Override
+                public void terminated(State from) {
+                    notifyDelegateStopped();
+                }
+
+                @Override
+                public void failed(State from, Throwable failure) {
+                    notifyDelegateStopped();
+                }
+            }, MoreExecutors.sameThreadExecutor());
+            return delegate;
         }
     }
 }
