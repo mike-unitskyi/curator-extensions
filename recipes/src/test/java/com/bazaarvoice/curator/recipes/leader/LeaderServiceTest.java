@@ -52,7 +52,8 @@ public class LeaderServiceTest extends ZooKeeperTest {
     }
 
     private LeaderService newLeaderService(int reacquireDelay, TimeUnit reacquireDelayUnit, Supplier<Service> services) {
-        return register(new LeaderService(_curator, PATH, "test-id", reacquireDelay, reacquireDelayUnit, services));
+        return register(new LeaderService(
+                _curator, PATH, "test-id", "LeaderService", reacquireDelay, reacquireDelayUnit, services));
     }
 
 
@@ -76,7 +77,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         assertEquals(new Participant("test-id", true), leader.getLeader());
         assertEquals(Collections.singletonList(new Participant("test-id", true)), leader.getParticipants());
         assertFalse(triggers.getTerminated().hasFired());
-        assertTrue(leader.getDelegateService().get().isRunning());
+        assertTrue(leader.getCurrentDelegateService().get().isRunning());
 
         // Start watching ZooKeeper directly for changes
         WatchTrigger childrenTrigger = WatchTrigger.childrenTrigger();
@@ -86,7 +87,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         leader.stop();
         assertTrue(triggers.getTerminated().firedWithin(1, TimeUnit.SECONDS));
         assertFalse(leader.isRunning());
-        assertFalse(leader.getDelegateService().isPresent());
+        assertFalse(leader.getCurrentDelegateService().isPresent());
 
         // Wait for stopped state to reflect in ZooKeeper then poll ZooKeeper for leadership participants state
         assertTrue(childrenTrigger.firedWithin(1, TimeUnit.SECONDS));
@@ -158,10 +159,12 @@ public class LeaderServiceTest extends ZooKeeperTest {
         int reacquireDelayMillis = 1500;
         ServiceTriggers triggers1 = new ServiceTriggers();
         ServiceTriggers triggers2 = new ServiceTriggers();
+        ServiceTimer timer1 = new ServiceTimer();
+        ServiceTimer timer2 = new ServiceTimer();
         List<Event> events = Collections.synchronizedList(Lists.<Event>newArrayList());
         Service leader = newLeaderService(reacquireDelayMillis, TimeUnit.MILLISECONDS, supply(
-                triggers1.listenTo(trackEvents("1", events, new NopService())),
-                triggers2.listenTo(trackEvents("2", events, new NopService()))));
+                triggers1.listenTo(timer1.listenTo(trackEvents("1", events, new NopService()))),
+                triggers2.listenTo(timer2.listenTo(trackEvents("2", events, new NopService())))));
 
         leader.start();
         assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
@@ -173,7 +176,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         leader.stop();
         assertTrue(triggers2.getTerminated().firedWithin(1, TimeUnit.MINUTES));
 
-        // Verify sequence of events.
+        // Verify sequence of events, no overlap between service instances.
         assertEquals(ImmutableList.of(
                 new Event("1", Service.State.STARTING),
                 new Event("1", Service.State.RUNNING),
@@ -184,62 +187,64 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 new Event("2", Service.State.STOPPING),
                 new Event("2", Service.State.TERMINATED)
         ), events);
-        Event stop1 = events.get(3), start2 = events.get(4);
 
         // Verify that the re-acquire delay was observed
-        long reacquireDelay = start2.getTimestamp() - stop1.getTimestamp();
-        assertTrue("Re-acquire delay was not observed: " + reacquireDelay, reacquireDelay >= reacquireDelayMillis);
+        long actualDelayMillis = timer2.getStartedAt() - timer1.getStoppedAt();
+        assertTrue("Re-acquire delay was not observed: " + actualDelayMillis, actualDelayMillis >= reacquireDelayMillis);
     }
 
-    /** Verify that leadership is re-acquired after the connection to ZooKeeper is lost. */
+    /** Verify that leadership is re-acquired after the the delegate service throws an exception at startup. */
     @Test
     public void testStartupFailed() throws Exception {
         int reacquireDelayMillis = 1500;
         ServiceTriggers triggers1 = new ServiceTriggers();
         ServiceTriggers triggers2 = new ServiceTriggers();
+        ServiceTimer timer1 = new ServiceTimer();
+        ServiceTimer timer2 = new ServiceTimer();
         List<Event> events = Collections.synchronizedList(Lists.<Event>newArrayList());
         Service leader = newLeaderService(reacquireDelayMillis, TimeUnit.MILLISECONDS, supply(
-                triggers1.listenTo(trackEvents("1", events, new NopService() {
+                triggers1.listenTo(timer1.listenTo(trackEvents("1", events, new NopService() {
                     @Override
                     protected void startUp() throws Exception {
                         throw new Exception("Startup failed");
                     }
-                })),
-                triggers2.listenTo(trackEvents("2", events, new NopService()))));
+                }))),
+                triggers2.listenTo(timer2.listenTo(trackEvents("2", events, new NopService())))));
 
         leader.start();
         assertTrue(triggers1.getFailed().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(triggers2.getRunning().firedWithin(1, TimeUnit.MINUTES));
 
-        // Verify sequence of events.
+        // Verify sequence of events, no overlap between service instances.
         assertEquals(ImmutableList.of(
                 new Event("1", Service.State.STARTING),
                 new Event("1", Service.State.FAILED),
                 new Event("2", Service.State.STARTING),
                 new Event("2", Service.State.RUNNING)
         ), events);
-        Event start1 = events.get(1), start2 = events.get(2);
 
         // Verify that the re-acquire delay was observed
-        long reacquireDelay = start2.getTimestamp() - start1.getTimestamp();
-        assertTrue("Re-acquire delay was not observed: " + reacquireDelay, reacquireDelay >= reacquireDelayMillis);
+        long actualDelayMillis = timer2.getStartedAt() - timer1.getStoppedAt();
+        assertTrue("Re-acquire delay was not observed: " + actualDelayMillis, actualDelayMillis >= reacquireDelayMillis);
     }
 
-    /** Verify that leadership is re-acquired after the connection to ZooKeeper is lost. */
+    /** Verify that leadership is re-acquired after the the delegate service throws an exception at shutdown. */
     @Test
     public void testShutdownFailed() throws Exception {
         int reacquireDelayMillis = 1500;
         ServiceTriggers triggers1 = new ServiceTriggers();
         ServiceTriggers triggers2 = new ServiceTriggers();
+        ServiceTimer timer1 = new ServiceTimer();
+        ServiceTimer timer2 = new ServiceTimer();
         List<Event> events = Collections.synchronizedList(Lists.<Event>newArrayList());
         Service leader = newLeaderService(reacquireDelayMillis, TimeUnit.MILLISECONDS, supply(
-                triggers1.listenTo(trackEvents("1", events, new NopService() {
+                triggers1.listenTo(timer1.listenTo(trackEvents("1", events, new NopService() {
                     @Override
                     protected void shutDown() throws Exception {
                         throw new Exception("ShutDown failed");
                     }
-                })),
-                triggers2.listenTo(trackEvents("2", events, new NopService()))));
+                }))),
+                triggers2.listenTo(timer2.listenTo(trackEvents("2", events, new NopService())))));
 
         leader.start();
         assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
@@ -248,7 +253,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         assertTrue(triggers1.getFailed().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(triggers2.getRunning().firedWithin(1, TimeUnit.MINUTES));
 
-        // Verify sequence of events.
+        // Verify sequence of events, no overlap between service instances.
         assertEquals(ImmutableList.of(
                 new Event("1", Service.State.STARTING),
                 new Event("1", Service.State.RUNNING),
@@ -257,11 +262,39 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 new Event("2", Service.State.STARTING),
                 new Event("2", Service.State.RUNNING)
         ), events);
-        Event stop1 = events.get(3), start2 = events.get(4);
 
         // Verify that the re-acquire delay was observed
-        long reacquireDelay = start2.getTimestamp() - stop1.getTimestamp();
-        assertTrue("Re-acquire delay was not observed: " + reacquireDelay, reacquireDelay >= reacquireDelayMillis);
+        long actualDelayMillis = timer2.getStartedAt() - timer1.getStoppedAt();
+        assertTrue("Re-acquire delay was not observed: " + actualDelayMillis, actualDelayMillis >= reacquireDelayMillis);
+    }
+
+    /** Verify that leadership is re-acquired after the the delegate service throws an exception at shutdown. */
+    @Test
+    public void testShutdownDuringReacquireDelay() throws Exception {
+        ServiceTriggers leaderTriggers = new ServiceTriggers();
+        ServiceTriggers triggers1 = new ServiceTriggers();
+        ServiceTriggers triggers2 = new ServiceTriggers();
+        LeaderService leader = leaderTriggers.listenTo(newLeaderService(15, TimeUnit.MINUTES, supply(
+                triggers1.listenTo(new NopService()),
+                triggers2.listenTo(new NopService()))));
+
+        leader.start();
+        assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
+
+        leader.getCurrentDelegateService().get().stop();
+        assertTrue(triggers1.getTerminated().firedWithin(1, TimeUnit.SECONDS));
+
+        // Should be waiting for the reacquire delay now.  Make sure we don't immediately start the 2nd service.
+        Thread.sleep(50);
+        assertFalse(triggers2.getStarting().hasFired());
+
+        // Stop the leader service and verify that we interrupt the reacquire delay sleep.
+        assertFalse(leaderTriggers.getTerminated().hasFired());
+        leader.stop();
+        assertTrue(leaderTriggers.getTerminated().firedWithin(1, TimeUnit.SECONDS));
+
+        // One last check that the 2nd service was never started...
+        assertFalse(triggers2.getStarting().hasFired());
     }
 
     /** Verify that the name of the thread created by LeaderSelector is set correctly. */
@@ -290,7 +323,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
     }
 
     private static Service trackEvents(String id, List<Event> events, Service service) {
-        service.addListener(new EventListener(id, events, service), MoreExecutors.sameThreadExecutor());
+        service.addListener(new EventListener(id, events), MoreExecutors.sameThreadExecutor());
         return service;
     }
 
@@ -319,7 +352,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         private final Trigger _terminated = new Trigger();
         private final Trigger _failed = new Trigger();
 
-        public Service listenTo(Service service) {
+        public <T extends Service> T listenTo(T service) {
             service.addListener(this, MoreExecutors.sameThreadExecutor());
             return service;
         }
@@ -370,15 +403,54 @@ public class LeaderServiceTest extends ZooKeeperTest {
         }
     }
 
+    private static class ServiceTimer implements Service.Listener {
+        private Long _startedAt;
+        private Long _stoppedAt;
+
+        public <T extends Service> T listenTo(T service) {
+            service.addListener(this, MoreExecutors.sameThreadExecutor());
+            return service;
+        }
+
+        @Override
+        public void starting() {
+        }
+
+        @Override
+        public void running() {
+            _startedAt = System.currentTimeMillis();
+        }
+
+        @Override
+        public void stopping(Service.State from) {
+        }
+
+        @Override
+        public void terminated(Service.State from) {
+            _stoppedAt = System.currentTimeMillis();
+        }
+
+        @Override
+        public void failed(Service.State from, Throwable failure) {
+            _stoppedAt = System.currentTimeMillis();
+        }
+
+        public Long getStartedAt() {
+            return _startedAt;
+        }
+
+        public Long getStoppedAt() {
+            return _stoppedAt;
+        }
+    }
+
     private static class EventListener implements Service.Listener {
         private final String _id;
         private final List<Event> _events;
-        private final Service _service;
 
-        private EventListener(String id, List<Event> events, Service service) {
+        private EventListener(String id, List<Event> events) {
             _events = events;
             _id = id;
-            _service = service;
         }
 
         private boolean addEvent(Service.State state) {
@@ -414,16 +486,10 @@ public class LeaderServiceTest extends ZooKeeperTest {
     private static class Event {
         private final String _id;
         private final Service.State _state;
-        private final long _timestamp;
 
         private Event(String id, Service.State state) {
             _id = checkNotNull(id, "id");
             _state = checkNotNull(state, "state");
-            _timestamp = System.currentTimeMillis();
-        }
-
-        public long getTimestamp() {
-            return _timestamp;
         }
 
         @Override

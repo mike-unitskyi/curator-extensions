@@ -72,23 +72,40 @@ public class LeaderService extends AbstractExecutionThreadService {
     private final String _leaderPath;
     private final String _instanceId;
     private final String _serviceName;
-    private final Supplier<Service> _serviceSupplier;
+    private final Supplier<Service> _serviceFactory;
     private final long _reacquireDelayNanos;
     private volatile LeaderLatch _latch;
     private volatile Service _delegate;
 
-    public LeaderService(CuratorFramework curator, String leaderPath, String instanceId,
-                         long reacquireDelay, TimeUnit reacquireDelayUnit, Supplier<Service> serviceSupplier) {
-        this(curator, leaderPath, instanceId, "LeaderService", reacquireDelay, reacquireDelayUnit, serviceSupplier);
-    }
-
+    /**
+     * Creates an instance of the service that will create, start and stop a managed delegate service as this
+     * instance acquires and loses leadership in a leadership election.
+     * @param curator A started connection to ZooKeeper.
+     * @param leaderPath The ZooKeeper path under which the leadership election algorithm will create ephemeral
+     *                   ZooKeeper nodes.
+     * @param instanceId An identifier for this instance, included in the information returned by the
+     *                  {@link #getLeader()} and {@link #getParticipants()} instances.
+     * @param serviceName The name of this service.  This will be used to name a Java thread dedicated to the
+     *                    leadership election algorithm for this instance.
+     * @param reacquireDelay The amount of time to wait before attempting to re-acquire leadership after losing
+     *                       leadership due to ZooKeeper connection loss or after relinquishing leadership due to
+     *                       another process manually stopping the managed delegate service.  It may be desirable
+     *                       to set this to a relatively high value for services that are expensive to start to
+     *                       avoid a rapid sequence of restarts in the presence of network issues that cause the
+     *                       connection to ZooKeeper to flap back and forth.
+     * @param reacquireDelayUnit The unit of the <code>reacquireDelay</code> argument.
+     * @param serviceFactory A factory for delegate service instances.  This factory will be used to create a new
+     *                       instance of the delegate service each time leadership is acquired.  Because Guava
+     *                       services cannot be restarted, a new instance of the delegate service must be created
+     *                       each time leadership is acquired.
+     */
     public LeaderService(CuratorFramework curator, String leaderPath, String instanceId, String serviceName,
-                         long reacquireDelay, TimeUnit reacquireDelayUnit, Supplier<Service> serviceSupplier) {
+                         long reacquireDelay, TimeUnit reacquireDelayUnit, Supplier<Service> serviceFactory) {
         _curator = checkNotNull(curator, "curator");
         _leaderPath = checkNotNull(leaderPath, "leaderPath");
         _instanceId = checkNotNull(instanceId, "instanceId");
         _serviceName = checkNotNull(serviceName, "serviceName");
-        _serviceSupplier = checkNotNull(serviceSupplier, "serviceSupplier");
+        _serviceFactory = checkNotNull(serviceFactory, "serviceFactory");
         _reacquireDelayNanos = checkNotNull(reacquireDelayUnit, "reacquireDelayUnit").toNanos(reacquireDelay);
         checkArgument(_reacquireDelayNanos >= 0, "reacquireDelay must be non-negative");
         initLeaderLatch();
@@ -100,7 +117,7 @@ public class LeaderService extends AbstractExecutionThreadService {
     }
 
     /**
-     * Return this instance's participant id, if provided at construction time.  This will be the value returned
+     * @return This instance's participant id provided at construction time.  This will be the value returned
      * when {@link #getParticipants()} is called.
      */
     public String getId() {
@@ -108,7 +125,7 @@ public class LeaderService extends AbstractExecutionThreadService {
     }
 
     /**
-     * Returns the set of current participants in the leader selection.
+     * @return The set of current participants in the leader selection.
      * <p>
      * <B>NOTE</B> - this method polls the ZooKeeper server. Therefore it may return a value that does not match
      * {@link #hasLeadership()} as hasLeadership returns a cached value.
@@ -118,7 +135,7 @@ public class LeaderService extends AbstractExecutionThreadService {
     }
 
     /**
-     * Return the id for the current leader. If for some reason there is no current leader, a dummy participant
+     * @return The id for the current leader. If for some reason there is no current leader, a dummy participant
      * is returned.
      * <p>
      * <B>NOTE</B> - this method polls the ZooKeeper server. Therefore it may return a value that does not match
@@ -128,17 +145,17 @@ public class LeaderService extends AbstractExecutionThreadService {
         return _latch.getLeader();
     }
 
-    /** Return true if leadership is currently held by this instance. */
+    /** @return True if leadership is currently held by this instance. */
     public boolean hasLeadership() {
         return _latch.hasLeadership();
     }
 
     /**
-     * Returns the active wrapped service instance if this instance currently owns the leadership lock,
-     * {@link Optional#absent()} otherwise.
+     * @return The current wrapped service instance, if any.  This will always return {@link Optional#absent()}
+     * unless this instance currently owns the leadership lock.
      */
-    public Optional<Service> getDelegateService() {
-        return hasLeadership() ? Optional.fromNullable(_delegate) : Optional.<Service>absent();
+    public Optional<Service> getCurrentDelegateService() {
+        return _latch.hasLeadership() ? Optional.fromNullable(_delegate) : Optional.<Service>absent();
     }
 
     @Override
@@ -196,7 +213,7 @@ public class LeaderService extends AbstractExecutionThreadService {
 
     private void runAsLeader() throws InterruptedException {
         try {
-            _delegate = listenTo(_serviceSupplier.get());
+            _delegate = listenTo(_serviceFactory.get());
             _delegate.startAndWait();
             try {
                 awaitLeadershipLostOrServicesStopped();
