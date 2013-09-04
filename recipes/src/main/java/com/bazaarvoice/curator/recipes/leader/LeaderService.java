@@ -1,5 +1,6 @@
 package com.bazaarvoice.curator.recipes.leader;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -113,6 +114,14 @@ public class LeaderService extends AbstractIdleService {
         return _task.hasLeadership();
     }
 
+    /**
+     * Returns the wrapped service if this instance currently owns the leadership lock, {@link Optional#absent()}
+     * otherwise.
+     */
+    public Optional<Service> getDelegateService() {
+        return _task.getDelegate();
+    }
+
     @Override
     protected void startUp() throws Exception {
         _selector.autoRequeue();
@@ -126,18 +135,27 @@ public class LeaderService extends AbstractIdleService {
     }
 
     private class LeaderTask implements LeaderSelectorListener {
+        private volatile Service _delegate;
         private volatile boolean _delegateActive;
         private volatile boolean _lostLeadership;
 
         @Override
         public void takeLeadership(CuratorFramework client) {
-            _log.debug("Leadership acquired: {}", getId());
-
-            _delegateActive = true;
-            _lostLeadership = false;
             try {
-                if (isRunning()) {
-                    Service delegate = listenTo(_serviceSupplier.get());
+                // Check for races between leadership mutex acquisition and Curator cxn loss, service shutdown.
+                if (!hasLeadership() || !isRunning()) {
+                    _log.debug("Immediately abandoning leadership, state={}, hasLeadership={}: {}",
+                            state(), hasLeadership(), getId());
+                    return;
+                }
+
+                _log.debug("Leadership acquired: {}", getId());
+
+                // Start the delegate service and let it do its thing until (a) we lose the leadership mutex
+                // or (b) the LeaderService is stopped or (c) the delegate service is stopped.
+                _delegateActive = true;
+                try {
+                    Service delegate = _delegate = listenTo(_serviceSupplier.get());
                     delegate.startAndWait();
                     try {
                         awaitLeadershipLostOrServicesStopped(delegate);
@@ -146,35 +164,45 @@ public class LeaderService extends AbstractIdleService {
                     } finally {
                         delegate.stopAndWait();
                     }
+                } catch (Throwable t) {
+                    // Start may have failed due to a network error, we'll sleep for reacquireDelay and try again.
+                    _log.error("Exception starting or stopping leadership-managed service: {}", getId(), t);
+                } finally {
+                    notifyDelegateStopped();
                 }
-            } catch (Throwable t) {
-                // Start may have failed due to a network error, we'll sleep for reacquireDelay and try again.
-                _log.error("Exception starting or stopping leadership-managed service: {}", getId(), t);
+
+                if (!hasLeadership()) {
+                    _log.debug("Leadership lost: {}", getId());
+                } else if (isRunning()) {
+                    _log.debug("Leadership released: {}", getId());
+                }
+
+                if (!isRunning()) {
+                    // LeaderSelector.close() has been called or will be called shortly.
+                    _log.debug("Leadership released, stopping: {}", getId());
+                    return;
+                }
+
+                // If we lost leadership, wait a while for things to settle before trying to re-acquire leadership
+                // (eg. wait for a network hiccup to the ZooKeeper server to resolve).
+                try {
+                    sleep(_reacquireDelayNanos);
+                } catch (InterruptedException e) {
+                    // LeaderSelector is being closed.  We will release leadership.
+                    return;
+                }
+
+                // By returning we'll attempt to re-acquire leadership via LeaderSelector.autoRequeue().
+                _log.debug("Attempting to re-acquire leadership: {}", getId());
+
             } finally {
-                notifyDelegateStopped();
+                // Reset the lostLeadership flag just before Curator attempts to re-acquire the leadership mutex.
+                _lostLeadership = false;
             }
+        }
 
-            if (!hasLeadership()) {
-                _log.debug("Leadership lost: {}", getId());
-            }
-
-            if (!isRunning()) {
-                // LeaderSelector.close() has been called or will be called shortly.
-                _log.debug("Leadership released: {}", getId());
-                return;
-            }
-
-            // If we lost leadership, wait a while for things to settle before trying to re-acquire leadership
-            // (eg. wait for a network hiccup to the ZooKeeper server to resolve).
-            try {
-                sleep(_reacquireDelayNanos);
-            } catch (InterruptedException e) {
-                // LeaderSelector is being closed.  We will release leadership.
-                return;
-            }
-
-            // By returning we'll attempt to re-acquire leadership via LeaderSelector.autoRequeue().
-            _log.debug("Attempting to re-acquire leadership: {}", getId());
+        public Optional<Service> getDelegate() {
+            return Optional.fromNullable(_delegate);
         }
 
         public void close() throws InterruptedException {
@@ -207,6 +235,7 @@ public class LeaderService extends AbstractIdleService {
         }
 
         private synchronized void notifyDelegateStopped() {
+            _delegate = null;
             _delegateActive = false;
             notifyAll();
         }

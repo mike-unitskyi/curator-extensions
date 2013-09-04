@@ -78,6 +78,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         assertEquals(new Participant("test-id", true), leader.getLeader());
         assertEquals(Collections.singletonList(new Participant("test-id", true)), leader.getParticipants());
         assertFalse(triggers.getTerminated().hasFired());
+        assertTrue(leader.getDelegateService().get().isRunning());
 
         // Start watching ZooKeeper directly for changes
         WatchTrigger childrenTrigger = WatchTrigger.childrenTrigger();
@@ -87,6 +88,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         leader.stop();
         assertTrue(triggers.getTerminated().firedWithin(1, TimeUnit.SECONDS));
         assertFalse(leader.isRunning());
+        assertFalse(leader.getDelegateService().isPresent());
 
         // Wait for stopped state to reflect in ZooKeeper then poll ZooKeeper for leadership participants state
         assertTrue(childrenTrigger.firedWithin(1, TimeUnit.SECONDS));
