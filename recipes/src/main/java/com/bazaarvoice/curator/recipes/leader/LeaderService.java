@@ -151,8 +151,8 @@ public class LeaderService extends AbstractExecutionThreadService {
     }
 
     /**
-     * @return The current wrapped service instance, if any.  This will always return {@link Optional#absent()}
-     * unless this instance currently owns the leadership lock.
+     * @return The current wrapped service instance, if any.  Returns {@link Optional#absent()} when this instance
+     * does not own the leadership lock.
      */
     public Optional<Service> getCurrentDelegateService() {
         return _latch.hasLeadership() ? Optional.fromNullable(_delegate) : Optional.<Service>absent();
