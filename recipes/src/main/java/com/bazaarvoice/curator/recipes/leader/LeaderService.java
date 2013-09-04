@@ -2,20 +2,20 @@ package com.bazaarvoice.curator.recipes.leader;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.AbstractIdleService;
+import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Service;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.leader.LeaderSelector;
-import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;
+import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.Participant;
 import org.apache.curator.framework.state.ConnectionState;
-import org.apache.curator.utils.ThreadUtils;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.Collection;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -56,28 +56,47 @@ import static com.google.common.base.Preconditions.checkState;
  * </pre>
  * </p>
  */
-public class LeaderService extends AbstractIdleService {
-    private static final Logger _log = LoggerFactory.getLogger(LeaderService.class);
+public class LeaderService extends AbstractExecutionThreadService {
+    private static final Logger LOG = LoggerFactory.getLogger(LeaderService.class);
 
+    private final ConnectionStateListener _listener = new ConnectionStateListener() {
+        @Override
+        public void stateChanged(CuratorFramework curatorFramework, ConnectionState newState) {
+            if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+                LOG.debug("Lost leadership due to ZK state change to {}: {}", newState, getId());
+                closeLeaderLatch();
+            }
+        }
+    };
+    private final CuratorFramework _curator;
+    private final String _leaderPath;
+    private final String _instanceId;
+    private final String _serviceName;
     private final Supplier<Service> _serviceSupplier;
     private final long _reacquireDelayNanos;
-    private final LeaderSelector _selector;
-    private final LeaderTask _task = new LeaderTask();
+    private volatile LeaderLatch _latch;
+    private volatile Service _delegate;
 
     public LeaderService(CuratorFramework curator, String leaderPath, String instanceId,
-                         long reacquireDelay, TimeUnit reacquireDelayUnit,
-                         Supplier<Service> serviceSupplier) {
-        this(curator, leaderPath, instanceId, ThreadUtils.newThreadFactory("LeaderService"),
-                reacquireDelay, reacquireDelayUnit, serviceSupplier);
+                         long reacquireDelay, TimeUnit reacquireDelayUnit, Supplier<Service> serviceSupplier) {
+        this(curator, leaderPath, instanceId, "LeaderService", reacquireDelay, reacquireDelayUnit, serviceSupplier);
     }
 
-    public LeaderService(CuratorFramework curator, String leaderPath, String instanceId, ThreadFactory threadFactory,
+    public LeaderService(CuratorFramework curator, String leaderPath, String instanceId, String serviceName,
                          long reacquireDelay, TimeUnit reacquireDelayUnit, Supplier<Service> serviceSupplier) {
+        _curator = checkNotNull(curator, "curator");
+        _leaderPath = checkNotNull(leaderPath, "leaderPath");
+        _instanceId = checkNotNull(instanceId, "instanceId");
+        _serviceName = checkNotNull(serviceName, "serviceName");
         _serviceSupplier = checkNotNull(serviceSupplier, "serviceSupplier");
         _reacquireDelayNanos = checkNotNull(reacquireDelayUnit, "reacquireDelayUnit").toNanos(reacquireDelay);
         checkArgument(_reacquireDelayNanos >= 0, "reacquireDelay must be non-negative");
-        _selector = new LeaderSelector(curator, leaderPath, threadFactory, MoreExecutors.sameThreadExecutor(), _task);
-        _selector.setId(checkNotNull(instanceId, "instanceId"));
+        initLeaderLatch();
+    }
+
+    @Override
+    protected String serviceName() {
+        return _serviceName;
     }
 
     /**
@@ -85,7 +104,7 @@ public class LeaderService extends AbstractIdleService {
      * when {@link #getParticipants()} is called.
      */
     public String getId() {
-        return _selector.getId();
+        return _instanceId;
     }
 
     /**
@@ -95,7 +114,7 @@ public class LeaderService extends AbstractIdleService {
      * {@link #hasLeadership()} as hasLeadership returns a cached value.
      */
     public Collection<Participant> getParticipants() throws Exception {
-        return _selector.getParticipants();
+        return _latch.getParticipants();
     }
 
     /**
@@ -106,193 +125,180 @@ public class LeaderService extends AbstractIdleService {
      * {@link #hasLeadership()} as hasLeadership returns a cached value.
      */
     public Participant getLeader() throws Exception {
-        return _selector.getLeader();
+        return _latch.getLeader();
     }
 
     /** Return true if leadership is currently held by this instance. */
     public boolean hasLeadership() {
-        return _task.hasLeadership();
+        return _latch.hasLeadership();
     }
 
     /**
-     * Returns the wrapped service if this instance currently owns the leadership lock, {@link Optional#absent()}
-     * otherwise.
+     * Returns the active wrapped service instance if this instance currently owns the leadership lock,
+     * {@link Optional#absent()} otherwise.
      */
     public Optional<Service> getDelegateService() {
-        return _task.getDelegate();
+        return hasLeadership() ? Optional.fromNullable(_delegate) : Optional.<Service>absent();
     }
 
     @Override
     protected void startUp() throws Exception {
-        _selector.autoRequeue();
-        _selector.start();
+        _curator.getConnectionStateListenable().addListener(_listener);
     }
 
     @Override
     protected void shutDown() throws Exception {
-        _selector.close();
-        _task.close();
+        _curator.getConnectionStateListenable().removeListener(_listener);
     }
 
-    private class LeaderTask implements LeaderSelectorListener {
-        private volatile Service _delegate;
-        private volatile boolean _delegateActive;
-        private volatile boolean _lostLeadership;
+    @Override
+    protected void triggerShutdown() {
+        // Release leadership (if we have it) and wake up the main execution thread (if it's sleeping).
+        closeLeaderLatch();
+    }
 
-        @Override
-        public void takeLeadership(CuratorFramework client) {
+    @Override
+    protected void run() throws InterruptedException {
+        // Beware race conditions: closeLeaderLatch() may be called by another thread at any time.
+        while (isRunning()) {
             try {
-                // Check for races between leadership mutex acquisition and Curator cxn loss, service shutdown.
-                if (!hasLeadership() || !isRunning()) {
-                    _log.debug("Immediately abandoning leadership, state={}, hasLeadership={}: {}",
-                            state(), hasLeadership(), getId());
-                    return;
-                }
+                // Start attempting to acquire leadership via the Curator leadership latch.
+                LOG.debug("Attempting to acquire leadership: {}", getId());
+                LeaderLatch latch = startLeaderLatch();
 
-                _log.debug("Leadership acquired: {}", getId());
-
-                // Start the delegate service and let it do its thing until (a) we lose the leadership mutex
-                // or (b) the LeaderService is stopped or (c) the delegate service is stopped.
-                _delegateActive = true;
-                try {
-                    Service delegate = _delegate = listenTo(_serviceSupplier.get());
-                    delegate.startAndWait();
+                // Wait until (a) leadership is acquired or (b) the latch is closed by service shutdown or ZK cxn loss.
+                if (isRunning()) {
                     try {
-                        awaitLeadershipLostOrServicesStopped(delegate);
-                    } catch (InterruptedException ie) {
-                        // LeaderSelector is being closed.  We will release leadership.
-                    } finally {
-                        delegate.stopAndWait();
+                        latch.await();
+                    } catch (EOFException e) {
+                        // Latch was closed while we were waiting.
+                        checkState(!latch.hasLeadership());
                     }
-                } catch (Throwable t) {
-                    // Start may have failed due to a network error, we'll sleep for reacquireDelay and try again.
-                    _log.error("Exception starting or stopping leadership-managed service: {}", getId(), t);
-                } finally {
-                    notifyDelegateStopped();
                 }
 
-                if (!hasLeadership()) {
-                    _log.debug("Leadership lost: {}", getId());
-                } else if (isRunning()) {
-                    _log.debug("Leadership released: {}", getId());
+                // If we succeeded in acquiring leadership, start/run the leadership-managed delegate service.
+                if (isRunning() && latch.hasLeadership()) {
+                    LOG.debug("Leadership acquired: {}", getId());
+                    runAsLeader();
+                    LOG.debug("Leadership released: {}", getId());
                 }
-
-                if (!isRunning()) {
-                    // LeaderSelector.close() has been called or will be called shortly.
-                    _log.debug("Leadership released, stopping: {}", getId());
-                    return;
-                }
-
-                // If we lost leadership, wait a while for things to settle before trying to re-acquire leadership
-                // (eg. wait for a network hiccup to the ZooKeeper server to resolve).
-                try {
-                    sleep(_reacquireDelayNanos);
-                } catch (InterruptedException e) {
-                    // LeaderSelector is being closed.  We will release leadership.
-                    return;
-                }
-
-                // By returning we'll attempt to re-acquire leadership via LeaderSelector.autoRequeue().
-                _log.debug("Attempting to re-acquire leadership: {}", getId());
-
             } finally {
-                // Reset the lostLeadership flag just before Curator attempts to re-acquire the leadership mutex.
-                _lostLeadership = false;
+                closeLeaderLatch();
+            }
+
+            if (isRunning()) {
+                // If we lost or relinquished leadership, wait a while for things to settle before trying to
+                // re-acquire leadership (eg. wait for a network hiccup to the ZooKeeper server to resolve).
+                sleep(_reacquireDelayNanos);
             }
         }
+    }
 
-        public Optional<Service> getDelegate() {
-            return Optional.fromNullable(_delegate);
-        }
-
-        public void close() throws InterruptedException {
-            // Wake up the task if it's currently waiting for leadership to be lost, then wait for the task to
-            // ack back that it has stopped the delegate service.
-            checkState(!isRunning());
-            notifyServiceStopped();
-            awaitDelegateStopped();
-        }
-
-        public boolean hasLeadership() {
-            return _selector.hasLeadership() && !_lostLeadership;
-        }
-
-        private synchronized void notifyLeadershipLost() {
-            _lostLeadership = true;
-            notifyAll();
-        }
-
-        /** Wake up the task thread since either the parent service or the delegate service has stopped. */
-        private synchronized void notifyServiceStopped() {
-            notifyAll();
-        }
-
-        /** Wait until we loose leadership or this service is stopped or the delegate service has stopped. */
-        private synchronized void awaitLeadershipLostOrServicesStopped(Service delegate) throws InterruptedException {
-            while (hasLeadership() && isRunning() && delegate.isRunning()) {
-                wait();
+    private void runAsLeader() throws InterruptedException {
+        try {
+            _delegate = listenTo(_serviceSupplier.get());
+            _delegate.startAndWait();
+            try {
+                awaitLeadershipLostOrServicesStopped();
+            } finally {
+                _delegate.stopAndWait();
             }
-        }
-
-        private synchronized void notifyDelegateStopped() {
+        } catch (InterruptedException ie) {
+            throw ie;
+        } catch (Throwable t) {
+            // Start may have failed due to a network error, we'll sleep for reacquireDelay and try again.
+            LOG.error("Exception starting or stopping leadership-managed service: {}", getId(), t);
+        } finally {
             _delegate = null;
-            _delegateActive = false;
-            notifyAll();
         }
+    }
 
-        /** Sleeps while the delegate service may be active. */
-        private synchronized void awaitDelegateStopped() throws InterruptedException {
-            while (_delegateActive) {
-                wait();
+    private LeaderLatch newLeaderLatch() {
+        return new LeaderLatch(_curator, _leaderPath, _instanceId);
+    }
+
+    // IMPORTANT: **************************************************************************************************
+    // All updates to the '_latch' object are synchronized to avoid race conditions between the service execution
+    // thread and the various listeners (ZK connection state listener, delegate service listener).
+
+    private synchronized void initLeaderLatch() {
+        // Create a non-started latch that we can use to implement getLeader(), getParticipants() & friends.
+        _latch = newLeaderLatch();
+    }
+
+    private synchronized LeaderLatch startLeaderLatch() throws InterruptedException {
+        LeaderLatch latch = _latch; // Read the volatile once
+        // Assert not started already.  initLeaderLatch() and closeLeaderLatch() leave the latch in the latent state.
+        checkState(latch.getState() == LeaderLatch.State.LATENT);
+        try {
+            latch.start();
+        } catch (InterruptedException ie) {
+            throw ie;
+        } catch (Throwable t) {
+            LOG.error("Exception attempting to acquire leadership: {}", getId(), t);
+        }
+        return latch;
+    }
+
+    private synchronized void closeLeaderLatch() {
+        LeaderLatch latch = _latch; // Read the volatile once
+        if (latch.getState() == LeaderLatch.State.STARTED) {
+            try {
+                latch.close();
+            } catch (IOException e) {
+                LOG.debug("Unexpected exception closing LeaderLatch.", e);
             }
         }
+        // Return the latch to a latent state (newly created) for use by getLeader(), getParticipants() & friends.
+        _latch = newLeaderLatch();
+        // Wake up the main execution thread.
+        notifyAll();
+    }
 
-        /** Sleeps for the specified amount of time or until the LeaderService is stopped, whichever comes first. */
-        private synchronized void sleep(long waitNanos) throws InterruptedException {
-            while (waitNanos > 0 && isRunning()) {
-                long start = System.nanoTime();
-                TimeUnit.NANOSECONDS.timedWait(this, waitNanos);
-                waitNanos -= System.nanoTime() - start;
+    /** Wait until we lose leadership or this service is stopped or the delegate service is stopped. */
+    private synchronized void awaitLeadershipLostOrServicesStopped() throws InterruptedException {
+        while (_latch.hasLeadership() && isRunning() && _delegate.isRunning()) {
+            wait();
+        }
+    }
+
+    /** Wait for the specified amount of time or until this service is stopped, whichever comes first. */
+    private synchronized void sleep(long waitNanos) throws InterruptedException {
+        while (waitNanos > 0 && isRunning()) {
+            long start = System.nanoTime();
+            TimeUnit.NANOSECONDS.timedWait(this, waitNanos);
+            waitNanos -= System.nanoTime() - start;
+        }
+    }
+
+    /** Release leadership when the service terminates (normally or abnormally). */
+    private Service listenTo(Service delegate) {
+        delegate.addListener(new Listener() {
+            @Override
+            public void starting() {
+                // Do nothing
             }
-        }
 
-        @Override
-        public void stateChanged(CuratorFramework client, ConnectionState newState) {
-            if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-                _log.debug("Lost leadership due to ZK state change to {}: {}", newState, getId());
-                notifyLeadershipLost();
+            @Override
+            public void running() {
+                // Do nothing
             }
-        }
 
-        /** Release leadership when the service terminates (normally or abnormally). */
-        private Service listenTo(Service delegate) {
-            delegate.addListener(new Listener() {
-                @Override
-                public void starting() {
-                    // Do nothing
-                }
+            @Override
+            public void stopping(State from) {
+                // Do nothing
+            }
 
-                @Override
-                public void running() {
-                    // Do nothing
-                }
+            @Override
+            public void terminated(State from) {
+                closeLeaderLatch();
+            }
 
-                @Override
-                public void stopping(State from) {
-                    // Do nothing
-                }
-
-                @Override
-                public void terminated(State from) {
-                    notifyDelegateStopped();
-                }
-
-                @Override
-                public void failed(State from, Throwable failure) {
-                    notifyDelegateStopped();
-                }
-            }, MoreExecutors.sameThreadExecutor());
-            return delegate;
-        }
+            @Override
+            public void failed(State from, Throwable failure) {
+                closeLeaderLatch();
+            }
+        }, MoreExecutors.sameThreadExecutor());
+        return delegate;
     }
 }

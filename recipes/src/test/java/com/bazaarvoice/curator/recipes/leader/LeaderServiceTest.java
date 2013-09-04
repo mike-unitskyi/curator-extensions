@@ -21,8 +21,6 @@ import java.io.Closeable;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -271,16 +269,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
     public void testThreadName() throws Exception {
         final String expectedThreadName = "TestLeaderService";
         final SettableFuture<String> actualThreadName = SettableFuture.create();
-        ThreadFactory threadFactory = new ThreadFactory() {
-            @Override
-            @SuppressWarnings("NullableProblems")
-            public Thread newThread(Runnable r) {
-                Thread thread = Executors.defaultThreadFactory().newThread(r);
-                thread.setName(expectedThreadName);
-                return thread;
-            }
-        };
-        register(new LeaderService(_curator, PATH, "id", threadFactory, 1, TimeUnit.HOURS, new Supplier<Service>() {
+        register(new LeaderService(_curator, PATH, "id", expectedThreadName, 1, TimeUnit.HOURS, new Supplier<Service>() {
             @Override
             public Service get() {
                 return new AbstractService() {
