@@ -284,10 +284,10 @@ public class LeaderServiceTest extends ZooKeeperTest {
 
         leader.getCurrentDelegateService().get().stop();
         assertTrue(triggers1.getTerminated().firedWithin(1, TimeUnit.SECONDS));
-        assertFalse(leader.hasLeadership());
 
         // Should be waiting for the reacquire delay now.  Make sure we don't immediately start the 2nd service.
         Thread.sleep(50);
+        assertFalse(leader.hasLeadership());
         assertFalse(triggers2.getStarting().hasFired());
 
         // Stop the leader service and verify that we interrupt the reacquire delay sleep.
