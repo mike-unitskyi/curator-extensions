@@ -9,23 +9,17 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>dropwizard</artifactId>
+    <artifactId>core</artifactId>
     <packaging>jar</packaging>
 
-    <name>dropwizard</name>
-    <description>Helpers for making it easier to use Curator in a Dropwizard application.</description>
+    <name>core</name>
+    <description>Helpers for making it easier to use Curator.</description>
 
     <properties>
         <dropwizard.version>0.6.1</dropwizard.version>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.bazaarvoice.curator</groupId>
-            <artifactId>core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -34,12 +28,6 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.yammer.dropwizard</groupId>
-            <artifactId>dropwizard-core</artifactId>
-            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>

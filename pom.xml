@@ -141,6 +141,7 @@
     </dependencyManagement>
 
     <modules>
+        <module>core</module>
         <module>dropwizard</module>
         <module>recipes</module>
         <module>test</module>
