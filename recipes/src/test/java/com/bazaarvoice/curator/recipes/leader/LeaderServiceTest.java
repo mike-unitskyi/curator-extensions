@@ -45,7 +45,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         closer().register(new Closeable() {
             @Override
             public void close() {
-                service.stop();
+                service.stopAsync().awaitTerminated();
             }
         });
         return service;
@@ -70,7 +70,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         assertFalse(leader.hasLeadership());
 
         // Start trying to obtain leadership
-        leader.start();
+        leader.startAsync().awaitRunning();
         assertTrue(triggers.getRunning().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(leader.isRunning());
         assertTrue(leader.hasLeadership());
@@ -84,7 +84,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         _curator.getChildren().usingWatcher(childrenTrigger).forPath(PATH);
 
         // Stop trying to obtain leadership
-        leader.stop();
+        leader.stopAsync().awaitTerminated();
         assertTrue(triggers.getTerminated().firedWithin(1, TimeUnit.SECONDS));
         assertFalse(leader.isRunning());
         assertFalse(leader.getCurrentDelegateService().isPresent());
@@ -119,7 +119,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
                         }
                     };
                 }
-            }).start();
+            }).startAsync().awaitRunning();
         }
         assertTrue(started.firedWithin(1, TimeUnit.MINUTES));
         // We know one service has started.  Wait a little while and verify no more services are started.
@@ -137,7 +137,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 triggers1.listenTo(new AbstractScheduledService() {
                     @Override
                     protected void runOneIteration() throws Exception {
-                        stop();
+                        stopAsync().awaitTerminated();
                     }
 
                     @Override
@@ -146,7 +146,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
                     }
                 }),
                 triggers2.listenTo(new NopService())));
-        leader.start();
+        leader.startAsync().awaitRunning();
 
         assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(triggers1.getTerminated().firedWithin(1, TimeUnit.MINUTES));
@@ -166,14 +166,14 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 triggers1.listenTo(timer1.listenTo(trackEvents("1", events, new NopService()))),
                 triggers2.listenTo(timer2.listenTo(trackEvents("2", events, new NopService())))));
 
-        leader.start();
+        leader.startAsync().awaitRunning();
         assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
 
         killSession(_curator);
         assertTrue(triggers1.getTerminated().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(triggers2.getRunning().firedWithin(1, TimeUnit.MINUTES));
 
-        leader.stop();
+        leader.stopAsync().awaitTerminated();
         assertTrue(triggers2.getTerminated().firedWithin(1, TimeUnit.MINUTES));
 
         // Verify sequence of events, no overlap between service instances.
@@ -211,7 +211,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 }))),
                 triggers2.listenTo(timer2.listenTo(trackEvents("2", events, new NopService())))));
 
-        leader.start();
+        leader.startAsync().awaitRunning();
         assertTrue(triggers1.getFailed().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(triggers2.getRunning().firedWithin(1, TimeUnit.MINUTES));
 
@@ -246,7 +246,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 }))),
                 triggers2.listenTo(timer2.listenTo(trackEvents("2", events, new NopService())))));
 
-        leader.start();
+        leader.startAsync().awaitRunning();
         assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
 
         killSession(_curator);
@@ -278,11 +278,11 @@ public class LeaderServiceTest extends ZooKeeperTest {
                 triggers1.listenTo(new NopService()),
                 triggers2.listenTo(new NopService()))));
 
-        leader.start();
+        leader.startAsync().awaitRunning();
         assertTrue(triggers1.getRunning().firedWithin(1, TimeUnit.MINUTES));
         assertTrue(leader.hasLeadership());
 
-        leader.getCurrentDelegateService().get().stop();
+        leader.getCurrentDelegateService().get().stopAsync().awaitTerminated();
         assertTrue(triggers1.getTerminated().firedWithin(1, TimeUnit.SECONDS));
 
         // Should be waiting for the reacquire delay now.  Make sure we don't immediately start the 2nd service.
@@ -292,7 +292,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
 
         // Stop the leader service and verify that we interrupt the reacquire delay sleep.
         assertFalse(leaderTriggers.getTerminated().hasFired());
-        leader.stop();
+        leader.stopAsync().awaitTerminated();
         assertTrue(leaderTriggers.getTerminated().firedWithin(1, TimeUnit.SECONDS));
 
         // One last check that the 2nd service was never started...
@@ -320,7 +320,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
                     }
                 };
             }
-        })).start();
+        })).startAsync().awaitRunning();
         assertEquals(expectedThreadName, actualThreadName.get(1, TimeUnit.MINUTES));
     }
 
@@ -347,7 +347,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         protected void shutDown() throws Exception {}
     }
 
-    private static class ServiceTriggers implements Service.Listener {
+    private static class ServiceTriggers extends Service.Listener {
         private final Trigger _starting = new Trigger();
         private final Trigger _running = new Trigger();
         private final Trigger _stopping = new Trigger();
@@ -405,7 +405,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         }
     }
 
-    private static class ServiceTimer implements Service.Listener {
+    private static class ServiceTimer extends Service.Listener {
         private Long _startedAt;
         private Long _stoppedAt;
 
@@ -415,16 +415,8 @@ public class LeaderServiceTest extends ZooKeeperTest {
         }
 
         @Override
-        public void starting() {
-        }
-
-        @Override
         public void running() {
             _startedAt = System.currentTimeMillis();
-        }
-
-        @Override
-        public void stopping(Service.State from) {
         }
 
         @Override
@@ -446,7 +438,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         }
     }
 
-    private static class EventListener implements Service.Listener {
+    private static class EventListener extends Service.Listener {
         private final String _id;
         private final List<Event> _events;
 
