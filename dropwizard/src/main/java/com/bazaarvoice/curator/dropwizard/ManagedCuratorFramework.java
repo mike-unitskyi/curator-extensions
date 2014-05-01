@@ -1,9 +1,9 @@
 package com.bazaarvoice.curator.dropwizard;
 
 import com.google.common.io.Closeables;
+import io.dropwizard.lifecycle.Managed;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
-import com.yammer.dropwizard.lifecycle.Managed;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
