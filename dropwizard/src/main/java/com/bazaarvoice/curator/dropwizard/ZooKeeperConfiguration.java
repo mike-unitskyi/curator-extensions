@@ -8,7 +8,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.yammer.dropwizard.config.Environment;
+import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
+import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 
@@ -27,9 +28,8 @@ public class ZooKeeperConfiguration {
     @JsonProperty("namespace")
     private Optional<String> _namespace = Optional.absent();
 
-    @NotNull
     @JsonProperty("retryPolicy")
-    private Optional<RetryPolicy> _configRetryPolicy = Optional.absent();
+    private RetryPolicy _configRetryPolicy = null;
 
     /**
      * Used to hold a retry policy provided by a setter.  This needs to be separate from {@code _retryPolicy} because
@@ -46,13 +46,18 @@ public class ZooKeeperConfiguration {
         // Make all of the curator threads daemon threads so they don't block the JVM from terminating.  Also label them
         // with the ensemble they're connecting to, in case someone is trying to sort through a thread dump.
         ThreadFactory threadFactory = new ThreadFactoryBuilder()
-                .setNameFormat("CuratorFramework[" + _connectString + "]-%d")
+                .setNameFormat("CuratorFramework[" + _connectString.or(DEFAULT_CONNECT_STRING) + "]-%d")
                 .setDaemon(true)
                 .build();
 
+        org.apache.curator.RetryPolicy retry = _setterRetryPolicy.or(
+                (_configRetryPolicy != null)
+                        ? _configRetryPolicy
+                        : DEFAULT_RETRY_POLICY
+        );
         return CuratorFrameworkFactory.builder()
                 .ensembleProvider(new ResolvingEnsembleProvider(_connectString.or(DEFAULT_CONNECT_STRING)))
-                .retryPolicy(_setterRetryPolicy.or(_configRetryPolicy.or(DEFAULT_RETRY_POLICY)))
+                .retryPolicy(retry)
                 .namespace(_namespace.orNull())
                 .threadFactory(threadFactory)
                 .build();
@@ -61,8 +66,19 @@ public class ZooKeeperConfiguration {
     /**
      * Return a managed Curator connection.  This created connection will be wrapped in a
      * {@link ManagedCuratorFramework} and offered to the provided {@link Environment} parameter.
+     *
+     * @deprecated Use {@link #newManagedCurator(LifecycleEnvironment)} instead.
      */
+    @Deprecated
     public CuratorFramework newManagedCurator(Environment env) {
+        return newManagedCurator(env.lifecycle());
+    }
+
+    /**
+     * Return a managed Curator connection.  This created connection will be wrapped in a
+     * {@link ManagedCuratorFramework} and offered to the provided {@link LifecycleEnvironment} parameter.
+     */
+    public CuratorFramework newManagedCurator(LifecycleEnvironment env) {
         CuratorFramework curator = newCurator();
         env.manage(new ManagedCuratorFramework(curator));
         return curator;
@@ -84,7 +100,7 @@ public class ZooKeeperConfiguration {
             return _setterRetryPolicy;
         }
 
-        return Optional.<org.apache.curator.RetryPolicy>fromNullable(_configRetryPolicy.orNull());
+        return Optional.<org.apache.curator.RetryPolicy>fromNullable(_configRetryPolicy);
     }
 
     @JsonIgnore

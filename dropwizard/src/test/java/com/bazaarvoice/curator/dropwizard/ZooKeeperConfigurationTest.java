@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
@@ -13,7 +14,6 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.retry.RetryUntilElapsed;
-import com.yammer.dropwizard.config.Environment;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -155,7 +155,7 @@ public class ZooKeeperConfigurationTest {
                         .put("sleepMsBetweenRetries", 50)
                         .build()));
 
-        Environment env = mock(Environment.class);
+        LifecycleEnvironment env = mock(LifecycleEnvironment.class);
         CuratorFramework curator = config.newManagedCurator(env);
 
         assertNotNull(curator);

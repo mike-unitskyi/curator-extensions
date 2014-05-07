@@ -214,11 +214,11 @@ public class LeaderService extends AbstractExecutionThreadService {
     private void runAsLeader() throws InterruptedException {
         try {
             _delegate = listenTo(_serviceFactory.get());
-            _delegate.startAndWait();
+            _delegate.startAsync().awaitRunning();
             try {
                 awaitLeadershipLostOrServicesStopped();
             } finally {
-                _delegate.stopAndWait();
+                _delegate.stopAsync().awaitTerminated();
             }
         } catch (InterruptedException ie) {
             throw ie;
