@@ -16,7 +16,7 @@
     <description>Helpers for making it easier to use Curator in a Dropwizard application.</description>
 
     <properties>
-        <dropwizard.version>0.7.0</dropwizard.version>
+        <dropwizard.version>0.7.1</dropwizard.version>
     </properties>
 
     <dependencies>
