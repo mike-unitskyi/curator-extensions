@@ -10,7 +10,7 @@
 
     <groupId>com.bazaarvoice.curator</groupId>
     <artifactId>curator-extensions</artifactId>
-    <version>1.4.1</version>
+    <version>1.4.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
