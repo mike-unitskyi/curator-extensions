@@ -62,9 +62,9 @@ public class SampleService extends Service<SampleConfiguration> {
 
     @Override
     public void run(SampleConfiguration cfg, Environment env) {
-        CuratorFramework curator = cfg.getZooKeeperConfiguration().newManagedCurator(env);
+        CuratorFramework curator = cfg.getZooKeeperConfiguration().newManagedCurator(env.lifecycle());
 
-        environment.addHealthCheck(new CuratorHealthCheck(curator));
+        environment..healthChecks().register("curator", new CuratorHealthCheck(curator));
     }
 }
 ```
