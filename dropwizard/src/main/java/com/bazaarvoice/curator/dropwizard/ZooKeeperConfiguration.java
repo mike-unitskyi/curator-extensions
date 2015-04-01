@@ -7,9 +7,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Environment;
+import io.dropwizard.util.Duration;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 
@@ -30,6 +32,12 @@ public class ZooKeeperConfiguration {
 
     @JsonProperty("retryPolicy")
     private RetryPolicy _configRetryPolicy = null;
+
+    @JsonProperty("sessionTimeout")
+    private Duration _sessionTimeout = Duration.seconds(60);
+
+    @JsonProperty("connectionTimeout")
+    private Duration _connectionTimeout = Duration.seconds(15);
 
     /**
      * Used to hold a retry policy provided by a setter.  This needs to be separate from {@code _retryPolicy} because
@@ -58,6 +66,8 @@ public class ZooKeeperConfiguration {
         return CuratorFrameworkFactory.builder()
                 .ensembleProvider(new ResolvingEnsembleProvider(_connectString.or(DEFAULT_CONNECT_STRING)))
                 .retryPolicy(retry)
+                .sessionTimeoutMs(Ints.checkedCast(_sessionTimeout.toMilliseconds()))
+                .connectionTimeoutMs(Ints.checkedCast(_connectionTimeout.toMilliseconds()))
                 .namespace(_namespace.orNull())
                 .threadFactory(threadFactory)
                 .build();
