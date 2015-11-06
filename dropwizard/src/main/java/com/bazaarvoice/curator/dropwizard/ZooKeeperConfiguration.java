@@ -14,6 +14,7 @@ import io.dropwizard.setup.Environment;
 import io.dropwizard.util.Duration;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.hibernate.validator.valuehandling.UnwrapValidatedValue;
 
 import javax.validation.constraints.NotNull;
 import java.util.concurrent.ThreadFactory;
@@ -25,6 +26,7 @@ public class ZooKeeperConfiguration {
 
     @NotNull
     @JsonProperty("connectString")
+    @UnwrapValidatedValue(false)
     private Optional<String> _connectString = Optional.absent();
 
     @JsonProperty("namespace")
