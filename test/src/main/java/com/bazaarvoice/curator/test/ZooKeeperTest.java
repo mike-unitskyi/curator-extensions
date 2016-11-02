@@ -52,7 +52,7 @@ public abstract class ZooKeeperTest {
     }
 
     public void startZooKeeper() throws Exception {
-        _zooKeeperServer = _closer.register(new TestingServer(_instanceSpec));
+        _zooKeeperServer = _closer.register(new TestingServer(_instanceSpec, true));
     }
 
     public void stopZooKeeper() throws IOException {
