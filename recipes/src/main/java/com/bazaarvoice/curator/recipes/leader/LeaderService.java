@@ -26,12 +26,13 @@ import static com.google.common.base.Preconditions.checkState;
  * Starts and stops a Guava service based on whether this process is elected leader using a Curator leadership
  * election algorithm.
  * <p>
- * Because Guava services are not restartable, the <code>LeaderService</code> requires a <code>Supplier<Service></code>
- * that it will call each time leadership is acquired.  The <code>LeaderService</code> will ensure that only one
- * such <code>Service</code> instance is running at a time.
+ * Because Guava services are not restartable, the {@code LeaderService} requires a {@code Supplier<Service>}
+ * that it will call each time leadership is acquired.  The {@code LeaderService} will ensure that only one
+ * such {@code Service} instance is running at a time.
  * </p>
  * <p>
- * A typical use of <code>LeaderService</code> for a task that polls an external server might look like this:
+ * A typical use of {@code LeaderService} for a task that polls an external server might look like this:
+ * </p>
  * <pre>
  * CuratorFramework curator = ...;
  * String serverId = new HostAndPort(InetAddress.getLocalHost().getHostAddress(), "8080").toString();
@@ -54,7 +55,6 @@ import static com.google.common.base.Preconditions.checkState;
  *     }
  * }).start();
  * </pre>
- * </p>
  */
 public class LeaderService extends AbstractExecutionThreadService {
     private static final Logger LOG = LoggerFactory.getLogger(LeaderService.class);
@@ -125,21 +125,23 @@ public class LeaderService extends AbstractExecutionThreadService {
     }
 
     /**
-     * @return The set of current participants in the leader selection.
-     * <p>
      * <B>NOTE</B> - this method polls the ZooKeeper server. Therefore it may return a value that does not match
      * {@link #hasLeadership()} as hasLeadership returns a cached value.
+     *
+     * @return The set of current participants in the leader selection.
+     * @throws Exception ZooKeeper or thread error.
      */
     public Collection<Participant> getParticipants() throws Exception {
         return _latch.getParticipants();
     }
 
     /**
-     * @return The id for the current leader. If for some reason there is no current leader, a dummy participant
-     * is returned.
-     * <p>
      * <B>NOTE</B> - this method polls the ZooKeeper server. Therefore it may return a value that does not match
      * {@link #hasLeadership()} as hasLeadership returns a cached value.
+     *
+     * @return The id for the current leader. If for some reason there is no current leader, a dummy participant
+     * is returned.
+     * @throws Exception ZooKeeper or thread error.
      */
     public Participant getLeader() throws Exception {
         return _latch.getLeader();

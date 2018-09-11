@@ -49,6 +49,11 @@ public class PersistentEphemeralNode {
     /**
      * Create the ephemeral node in ZooKeeper.  If the node cannot be created in a timely fashion then an exception will
      * be thrown.
+     *
+     * @param curator Client to manage ZooKeeper nodes with.
+     * @param basePath Path to parent node this node should be created in.
+     * @param data Data to store in the node.
+     * @param mode Node creation mode.
      */
     public PersistentEphemeralNode(CuratorFramework curator, String basePath, byte[] data, CreateMode mode) {
         checkNotNull(curator);
