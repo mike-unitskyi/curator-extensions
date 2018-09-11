@@ -13,7 +13,8 @@ import static org.mockito.Mockito.when;
 
 public class ResolvingEnsembleProviderTest {
 
-    private final ResolvingEnsembleProvider.Resolver _resolver = mock(ResolvingEnsembleProvider.Resolver.class);
+    private final ResolvingEnsembleProvider.ResolvingEnsembleProviderDelegate.Resolver _resolver =
+            mock(ResolvingEnsembleProvider.ResolvingEnsembleProviderDelegate.Resolver.class);
 
     @Test
     public void testNameResolves() throws Exception {
@@ -97,7 +98,9 @@ public class ResolvingEnsembleProviderTest {
     }
 
     private ResolvingEnsembleProvider newProvider(String connectString) {
-        return new ResolvingEnsembleProvider(connectString, _resolver);
+        return new ResolvingEnsembleProvider(new ResolvingEnsembleProvider.ResolvingEnsembleProviderDelegate(
+                connectString, _resolver
+        ));
     }
 
     private ResolverOngoingStubbing whenQueried(String domain) throws Exception {
