@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.checkState;
  * String serverId = new HostAndPort(InetAddress.getLocalHost().getHostAddress(), "8080").toString();
  * final Duration pollInterval = ...;
  *
- * new LeaderService(curator, "/applications/my-app/leader", serverId, 1, TimeUnit.MINUTES, new Supplier<Service>() {
+ * new LeaderService(curator, "/applications/my-app/leader", serverId, 1, TimeUnit.MINUTES, new Supplier&lt;Service&gt;() {
  *     &#64;Override
  *     public Service get() {
  *         return new AbstractScheduledService() {
