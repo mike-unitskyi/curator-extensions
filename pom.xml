@@ -10,14 +10,14 @@
 
     <groupId>com.bazaarvoice.curator</groupId>
     <artifactId>curator-extensions</artifactId>
-    <version>1.5.2-SNAPSHOT</version>
+    <version>1.5.2</version>
     <packaging>pom</packaging>
 
     <scm>
         <url>https://github.com/bazaarvoice/curator-extensions</url>
         <connection>scm:git:git@github.com:bazaarvoice/curator-extensions</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/curator-extensions</developerConnection>
-        <tag>HEAD</tag>
+        <tag>curator-extensions-1.5.2</tag>
     </scm>
 
     <name>curator-extensions</name>
@@ -96,8 +96,8 @@
                         <id>enforce</id>
                         <configuration>
                             <rules>
-                                <requireUpperBoundDeps/>
-                                <dependencyConvergence/>
+                                <requireUpperBoundDeps />
+                                <dependencyConvergence />
                             </rules>
                             <goals>
                                 <goal>enforce</goal>
