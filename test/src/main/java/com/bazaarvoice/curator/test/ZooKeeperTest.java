@@ -1,6 +1,5 @@
 package com.bazaarvoice.curator.test;
 
-import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.google.common.io.Closer;
 import org.apache.curator.CuratorZookeeperClient;
@@ -101,7 +100,7 @@ public abstract class ZooKeeperTest {
             try {
                 return _latch.await(duration, unit);
             } catch (InterruptedException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
             }
         }
 

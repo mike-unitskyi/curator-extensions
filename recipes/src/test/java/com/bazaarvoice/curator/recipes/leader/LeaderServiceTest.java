@@ -320,7 +320,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
     }
 
     private static Service trackEvents(String id, List<Event> events, Service service) {
-        service.addListener(new EventListener(id, events), MoreExecutors.sameThreadExecutor());
+        service.addListener(new EventListener(id, events), MoreExecutors.directExecutor());
         return service;
     }
 
@@ -350,7 +350,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         private final Trigger _failed = new Trigger();
 
         public <T extends Service> T listenTo(T service) {
-            service.addListener(this, MoreExecutors.sameThreadExecutor());
+            service.addListener(this, MoreExecutors.directExecutor());
             return service;
         }
 
@@ -401,7 +401,7 @@ public class LeaderServiceTest extends ZooKeeperTest {
         private Long _stoppedAt;
 
         public <T extends Service> T listenTo(T service) {
-            service.addListener(this, MoreExecutors.sameThreadExecutor());
+            service.addListener(this, MoreExecutors.directExecutor());
             return service;
         }
 
