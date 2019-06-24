@@ -1,7 +1,6 @@
 package com.bazaarvoice.curator.recipes;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.curator.framework.CuratorFramework;
@@ -110,7 +109,7 @@ public class PersistentEphemeralNode {
         try {
             latch.await(duration, unit);
         } catch (InterruptedException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -118,7 +117,7 @@ public class PersistentEphemeralNode {
         try {
             executor.awaitTermination(duration, unit);
         } catch (InterruptedException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 

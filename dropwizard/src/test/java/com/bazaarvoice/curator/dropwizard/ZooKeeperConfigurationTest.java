@@ -3,7 +3,6 @@ package com.bazaarvoice.curator.dropwizard;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import org.apache.curator.RetryPolicy;
@@ -24,7 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -168,7 +167,7 @@ public class ZooKeeperConfigurationTest {
             String json = _parser.writeValueAsString(map);
             return _parser.readValue(json, ZooKeeperConfiguration.class);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 }
