@@ -30,4 +30,10 @@
         ]]></notes>
         <cve>CVE-2019-7238</cve>
     </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Suppress a Netty issue in Zookeeper 3.5.5
+        ]]></notes>
+        <cve>CVE-2019-16869</cve>
+    </suppress>
 </suppressions>
