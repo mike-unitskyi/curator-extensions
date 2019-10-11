@@ -1,5 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.2.xsd">
-
-
+  <suppress>
+        <notes><![CDATA[
+        Suppress a couple Jackson-Databind CVEs
+        ]]></notes>
+        <cve>CVE-2019-16942</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Suppress a couple Jackson-Databind CVEs
+        ]]></notes>
+        <cve>CVE-2019-16943</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Suppress Sonotype Nexus issues
+        ]]></notes>
+        <cve>CVE-2014-0792</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Suppress Sonotype Nexus issues
+        ]]></notes>
+        <cve>CVE-2014-9389</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Suppress a Netty issue in Zookeeper 3.5.5
+        ]]></notes>
+        <cve>CVE-2019-7238</cve>
+    </suppress>
+    <suppress>
+        <notes><![CDATA[
+        Suppress a Netty issue in Zookeeper 3.5.5
+        ]]></notes>
+        <cve>CVE-2019-16869</cve>
+    </suppress>
 </suppressions>
