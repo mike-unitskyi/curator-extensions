@@ -575,15 +575,14 @@ public class NodeDiscoveryTest extends ZooKeeperTest {
     private Set<Thread> rejectWorkerThreads(Set<Thread> threads) {
         Collection<Thread> workerThreads = new LinkedList<Thread>(threads);
 
-            for (Thread element : threads) {
-                if (element.getName().startsWith("NIOWorkerThread")) {
-                    workerThreads.add(element);
-                }
+        for (Thread element : threads) {
+            if (element.getName().startsWith("NIOWorkerThread")) {
+                workerThreads.add(element);
             }
+        }
 
-            threads.removeAll(workerThreads);
-
-            return threads;
+        threads.removeAll(workerThreads);
+        return threads;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
