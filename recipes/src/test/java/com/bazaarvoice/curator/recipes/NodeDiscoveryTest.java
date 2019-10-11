@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -565,6 +566,14 @@ public class NodeDiscoveryTest extends ZooKeeperTest {
         assertTrue(waitUntil(() -> {
             Set<Thread> threadsAtEnd = Thread.getAllStackTraces().keySet();
             Set<Thread> difference = Sets.difference(threadsAtEnd, threadsAtStart);
+
+            for (Iterator<Thread> i = difference.iterator(); i.hasNext();) {
+                Thread toTest = i.next();
+                if (toTest.getName().startsWith("NIOWorkerThread")) {
+                    i.remove();
+                }
+            }
+
             LOG.info("Extra threads: {}", difference);
             return difference.isEmpty();
         }));
