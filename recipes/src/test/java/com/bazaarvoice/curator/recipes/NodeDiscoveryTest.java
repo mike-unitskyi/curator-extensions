@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -555,7 +556,7 @@ public class NodeDiscoveryTest extends ZooKeeperTest {
     public void testThreadLeak() throws Exception {
         CuratorFramework curator = newCurator();
 
-        final Set<Thread> threadsAtStart = rejectWorkerThreads(Thread.getAllStackTraces().keySet());
+        final Set<Thread> threadsAtStart = Thread.getAllStackTraces().keySet();
 
         NodeDiscovery<String> nodeDiscovery = closer().register(new NodeDiscovery<>(curator, PATH, PARSER));
         nodeDiscovery.start();
@@ -565,24 +566,13 @@ public class NodeDiscoveryTest extends ZooKeeperTest {
         // have to wait a little while for the NodeDiscovery test to terminate.  Wait up to 10 seconds for things
         // to settle before failing the test (in the success case the loop will terminate quickly).
         assertTrue(waitUntil(() -> {
-            Set<Thread> threadsAtEnd = rejectWorkerThreads(Thread.getAllStackTraces().keySet());
-            Set<Thread> difference = Sets.difference(threadsAtEnd, threadsAtStart);
+            Set<Thread> difference = Thread.getAllStackTraces().keySet().stream().filter((thread) -> {
+                return !(thread.getName().startsWith("NIOWorkerThread") || threadsAtStart.contains(thread));
+            }).collect(Collectors.toSet());
+
             LOG.info("Extra threads: {}", difference);
             return difference.isEmpty();
         }));
-    }
-
-    private Set<Thread> rejectWorkerThreads(Set<Thread> threads) {
-        Collection<Thread> workerThreads = new LinkedList<Thread>(threads);
-
-        for (Thread element : threads) {
-            if (element.getName().startsWith("NIOWorkerThread")) {
-                workerThreads.add(element);
-            }
-        }
-
-        threads.removeAll(workerThreads);
-        return threads;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
