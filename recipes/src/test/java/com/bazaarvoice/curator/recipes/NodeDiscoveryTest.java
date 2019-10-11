@@ -2,7 +2,6 @@ package com.bazaarvoice.curator.recipes;
 
 import com.bazaarvoice.curator.test.ZooKeeperTest;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Sets;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.junit.Before;
@@ -16,8 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.LinkedList;
-import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
