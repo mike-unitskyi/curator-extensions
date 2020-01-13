@@ -12,4 +12,10 @@
         ]]></notes>
         <cve>CVE-2014-9389</cve>
     </suppress>
+    <suppress>	
+        <notes><![CDATA[	
+        Suppress Sonotype Nexus issues
+        ]]></notes>	
+        <cve>CVE-2019-7238</cve>
+    </suppress>        
 </suppressions>
