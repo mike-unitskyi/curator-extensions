@@ -99,7 +99,6 @@
                         <configuration>
                             <skip>${dependency.check.skip}</skip>
                             <failBuildOnCVSS>6</failBuildOnCVSS>
-                            <suppressionFile>${session.executionRootDirectory}/owasp-suppression.xml</suppressionFile>
                         </configuration>
                     </execution>
                 </executions>
